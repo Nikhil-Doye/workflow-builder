@@ -9,6 +9,53 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { callOpenAI, OpenAIConfig } from "../services/openaiService";
 
+// localStorage key for workflows
+const WORKFLOWS_STORAGE_KEY = "agent-workflow-builder-workflows";
+
+// Helper functions for localStorage operations
+const saveWorkflowsToStorage = (workflows: Workflow[]): boolean => {
+  try {
+    localStorage.setItem(WORKFLOWS_STORAGE_KEY, JSON.stringify(workflows));
+    return true;
+  } catch (error) {
+    console.error("Failed to save workflows to localStorage:", error);
+    // Show user-friendly error message
+    alert(
+      "Failed to save workflows. Your browser's storage might be full or disabled."
+    );
+    return false;
+  }
+};
+
+const loadWorkflowsFromStorage = (): Workflow[] => {
+  try {
+    const stored = localStorage.getItem(WORKFLOWS_STORAGE_KEY);
+    if (stored) {
+      const workflows = JSON.parse(stored);
+      // Convert date strings back to Date objects
+      return workflows.map((workflow: any) => ({
+        ...workflow,
+        createdAt: new Date(workflow.createdAt),
+        updatedAt: new Date(workflow.updatedAt),
+      }));
+    }
+  } catch (error) {
+    console.error("Failed to load workflows from localStorage:", error);
+    alert("Failed to load saved workflows. Some data might be corrupted.");
+  }
+  return [];
+};
+
+const clearWorkflowsFromStorage = (): boolean => {
+  try {
+    localStorage.removeItem(WORKFLOWS_STORAGE_KEY);
+    return true;
+  } catch (error) {
+    console.error("Failed to clear workflows from localStorage:", error);
+    return false;
+  }
+};
+
 interface WorkflowStore {
   workflows: Workflow[];
   currentWorkflow: Workflow | null;
@@ -21,6 +68,7 @@ interface WorkflowStore {
   loadWorkflow: (workflowId: string) => void;
   saveWorkflow: () => void;
   deleteWorkflow: (workflowId: string) => void;
+  clearAllWorkflows: () => void;
 
   // Node management
   addNode: (type: string, position: { x: number; y: number }) => void;
@@ -58,7 +106,7 @@ const createEmptyWorkflow = (name: string): Workflow => ({
 });
 
 export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
-  workflows: [],
+  workflows: loadWorkflowsFromStorage(),
   currentWorkflow: null,
   selectedNodeId: null,
   isExecuting: false,
@@ -66,10 +114,15 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
   createWorkflow: (name: string) => {
     const newWorkflow = createEmptyWorkflow(name);
-    set((state) => ({
-      workflows: [...state.workflows, newWorkflow],
+    const newWorkflows = [...get().workflows, newWorkflow];
+
+    set({
+      workflows: newWorkflows,
       currentWorkflow: newWorkflow,
-    }));
+    });
+
+    // Persist to localStorage
+    saveWorkflowsToStorage(newWorkflows);
   },
 
   loadWorkflow: (workflowId: string) => {
@@ -87,21 +140,45 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         updatedAt: new Date(),
       };
 
-      set((state) => ({
-        workflows: state.workflows.map((w) =>
-          w.id === updatedWorkflow.id ? updatedWorkflow : w
-        ),
+      const newWorkflows = get().workflows.map((w) =>
+        w.id === updatedWorkflow.id ? updatedWorkflow : w
+      );
+
+      set({
+        workflows: newWorkflows,
         currentWorkflow: updatedWorkflow,
-      }));
+      });
+
+      // Persist to localStorage
+      const success = saveWorkflowsToStorage(newWorkflows);
+      if (success) {
+        console.log(`Workflow "${currentWorkflow.name}" saved successfully`);
+      }
     }
   },
 
   deleteWorkflow: (workflowId: string) => {
-    set((state) => ({
-      workflows: state.workflows.filter((w) => w.id !== workflowId),
-      currentWorkflow:
-        state.currentWorkflow?.id === workflowId ? null : state.currentWorkflow,
-    }));
+    const newWorkflows = get().workflows.filter((w) => w.id !== workflowId);
+    const currentWorkflow =
+      get().currentWorkflow?.id === workflowId ? null : get().currentWorkflow;
+
+    set({
+      workflows: newWorkflows,
+      currentWorkflow,
+    });
+
+    // Persist to localStorage
+    saveWorkflowsToStorage(newWorkflows);
+  },
+
+  clearAllWorkflows: () => {
+    set({
+      workflows: [],
+      currentWorkflow: null,
+    });
+
+    // Clear from localStorage
+    clearWorkflowsFromStorage();
   },
 
   addNode: (type: string, position: { x: number; y: number }) => {

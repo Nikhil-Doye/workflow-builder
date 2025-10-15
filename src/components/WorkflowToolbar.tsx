@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useWorkflowStore } from "../store/workflowStore";
 import {
   Download,
@@ -8,6 +8,7 @@ import {
   Square,
   RotateCcw,
   Settings,
+  Check,
 } from "lucide-react";
 import {
   downloadWorkflow,
@@ -26,10 +27,13 @@ export const WorkflowToolbar: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showOpenAIConfig, setShowOpenAIConfig] = useState(false);
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
   const handleSave = () => {
     if (currentWorkflow) {
       saveWorkflow();
+      setShowSaveSuccess(true);
+      setTimeout(() => setShowSaveSuccess(false), 2000);
     }
   };
 
@@ -86,11 +90,19 @@ export const WorkflowToolbar: React.FC = () => {
       <div className="flex items-center space-x-2">
         <button
           onClick={handleSave}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+          className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${
+            showSaveSuccess
+              ? "bg-green-100 text-green-700 hover:bg-green-200"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
           title="Save workflow"
         >
-          <Save className="w-4 h-4" />
-          <span>Save</span>
+          {showSaveSuccess ? (
+            <Check className="w-4 h-4" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          <span>{showSaveSuccess ? "Saved!" : "Save"}</span>
         </button>
 
         <button
