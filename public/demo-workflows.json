@@ -1,0 +1,196 @@
+{
+  "workflows": [
+    {
+      "id": "demo-web-scraping-analysis",
+      "name": "Web Scraping + AI Analysis",
+      "description": "A complete workflow that scrapes a website and analyzes the content with AI",
+      "nodes": [
+        {
+          "id": "input-1",
+          "type": "dataInput",
+          "position": { "x": 100, "y": 100 },
+          "data": {
+            "id": "input-1",
+            "type": "dataInput",
+            "label": "Website URL",
+            "status": "idle",
+            "config": {
+              "dataType": "url",
+              "defaultValue": "https://example.com"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "scraper-1",
+          "type": "webScraping",
+          "position": { "x": 300, "y": 100 },
+          "data": {
+            "id": "scraper-1",
+            "type": "webScraping",
+            "label": "Web Scraper",
+            "status": "idle",
+            "config": {
+              "url": "{{input-1.output}}",
+              "selector": "body",
+              "maxLength": 2000
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "llm-1",
+          "type": "llmTask",
+          "position": { "x": 500, "y": 100 },
+          "data": {
+            "id": "llm-1",
+            "type": "llmTask",
+            "label": "Content Analyzer",
+            "status": "idle",
+            "config": {
+              "prompt": "Analyze the following web content and provide a summary:\n\n{{scraper-1.output}}",
+              "model": "gpt-3.5-turbo",
+              "temperature": 0.7,
+              "maxTokens": 500
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "output-1",
+          "type": "dataOutput",
+          "position": { "x": 700, "y": 100 },
+          "data": {
+            "id": "output-1",
+            "type": "dataOutput",
+            "label": "Analysis Result",
+            "status": "idle",
+            "config": {
+              "format": "json",
+              "filename": "analysis_result.json"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-1",
+          "source": "input-1",
+          "target": "scraper-1"
+        },
+        {
+          "id": "edge-2",
+          "source": "scraper-1",
+          "target": "llm-1"
+        },
+        {
+          "id": "edge-3",
+          "source": "llm-1",
+          "target": "output-1"
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "demo-embedding-search",
+      "name": "Document Embedding & Search",
+      "description": "Create embeddings from documents and perform similarity search",
+      "nodes": [
+        {
+          "id": "input-2",
+          "type": "dataInput",
+          "position": { "x": 100, "y": 200 },
+          "data": {
+            "id": "input-2",
+            "type": "dataInput",
+            "label": "Document Text",
+            "status": "idle",
+            "config": {
+              "dataType": "text",
+              "defaultValue": "This is a sample document about artificial intelligence and machine learning."
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "embedding-1",
+          "type": "embeddingGenerator",
+          "position": { "x": 300, "y": 200 },
+          "data": {
+            "id": "embedding-1",
+            "type": "embeddingGenerator",
+            "label": "Embedding Generator",
+            "status": "idle",
+            "config": {
+              "model": "text-embedding-ada-002",
+              "dimensions": 1536
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "search-1",
+          "type": "similaritySearch",
+          "position": { "x": 500, "y": 200 },
+          "data": {
+            "id": "search-1",
+            "type": "similaritySearch",
+            "label": "Similarity Search",
+            "status": "idle",
+            "config": {
+              "vectorStore": "pinecone",
+              "topK": 5,
+              "threshold": 0.8
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "output-2",
+          "type": "dataOutput",
+          "position": { "x": 700, "y": 200 },
+          "data": {
+            "id": "output-2",
+            "type": "dataOutput",
+            "label": "Search Results",
+            "status": "idle",
+            "config": {
+              "format": "json",
+              "filename": "search_results.json"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-4",
+          "source": "input-2",
+          "target": "embedding-1"
+        },
+        {
+          "id": "edge-5",
+          "source": "embedding-1",
+          "target": "search-1"
+        },
+        {
+          "id": "edge-6",
+          "source": "search-1",
+          "target": "output-2"
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
