@@ -4,6 +4,7 @@
   "description": "Open-source agent workflow builder using React Flow and AI",
   "private": true,
   "dependencies": {
+    "@mendable/firecrawl-js": "^4.4.0",
     "@types/node": "^16.18.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",

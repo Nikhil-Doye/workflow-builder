@@ -8,6 +8,10 @@ import {
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { callOpenAI, OpenAIConfig } from "../services/openaiService";
+import {
+  scrapeWithFirecrawl,
+  FirecrawlConfig,
+} from "../services/firecrawlService";
 
 // localStorage key for workflows
 const WORKFLOWS_STORAGE_KEY = "agent-workflow-builder-workflows";
@@ -463,16 +467,63 @@ const processWebScrapingNode = async (
 ) => {
   const config = node.data.config;
   const url = config.url || inputData;
-  const selector = config.selector || "body";
-  const maxLength = config.maxLength || 1000;
 
-  // In a real app, this would perform actual web scraping
-  const mockScrapedContent = `Scraped content from ${url} using selector "${selector}": ${inputData.substring(
-    0,
-    maxLength
-  )}...`;
+  // Prepare Firecrawl configuration
+  const firecrawlConfig: FirecrawlConfig = {
+    url,
+    formats: config.formats || ["markdown", "html"],
+    onlyMainContent: config.onlyMainContent !== false,
+    maxLength: config.maxLength || 5000,
+    waitFor: config.waitFor || 2000,
+    timeout: config.timeout || 30000,
+  };
 
-  return { output: mockScrapedContent, url, selector };
+  // Parse include/exclude tags if provided
+  if (config.includeTags) {
+    firecrawlConfig.includeTags = config.includeTags
+      .split(",")
+      .map((tag: string) => tag.trim())
+      .filter((tag: string) => tag.length > 0);
+  }
+
+  if (config.excludeTags) {
+    firecrawlConfig.excludeTags = config.excludeTags
+      .split(",")
+      .map((tag: string) => tag.trim())
+      .filter((tag: string) => tag.length > 0);
+  }
+
+  try {
+    // Use Firecrawl to scrape the URL
+    const result = await scrapeWithFirecrawl(firecrawlConfig);
+
+    if (result.success && result.data) {
+      return {
+        output: result.data.content,
+        url,
+        metadata: result.data.metadata,
+        markdown: result.data.markdown,
+        html: result.data.html,
+        formats: config.formats || ["markdown", "html"],
+        onlyMainContent: config.onlyMainContent !== false,
+      };
+    } else {
+      throw new Error(result.error || "Failed to scrape URL with Firecrawl");
+    }
+  } catch (error) {
+    console.error("Error processing web scraping node:", error);
+
+    // Return fallback response if Firecrawl fails
+    const fallbackContent = `Error scraping ${url}: ${
+      error instanceof Error ? error.message : "Unknown error"
+    }. Please check your Firecrawl API key and try again.`;
+
+    return {
+      output: fallbackContent,
+      url,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
 };
 
 const processEmbeddingNode = async (node: WorkflowNode, inputData: string) => {

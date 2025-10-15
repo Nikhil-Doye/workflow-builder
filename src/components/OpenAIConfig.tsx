@@ -7,6 +7,7 @@ interface OpenAIConfigProps {
 
 export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
   const [apiKey, setApiKey] = useState("");
+  const [firecrawlApiKey, setFirecrawlApiKey] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [validationStatus, setValidationStatus] = useState<
     "idle" | "success" | "error"
@@ -14,8 +15,8 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleSave = async () => {
-    if (!apiKey.trim()) {
-      setErrorMessage("Please enter an API key");
+    if (!apiKey.trim() && !firecrawlApiKey.trim()) {
+      setErrorMessage("Please enter at least one API key");
       setValidationStatus("error");
       return;
     }
@@ -24,25 +25,48 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
     setValidationStatus("idle");
 
     try {
-      // In a real app, you'd validate the API key with a backend service
-      // For now, we'll just check if it looks like a valid API key format
-      if (apiKey.startsWith("sk-") && apiKey.length > 20) {
-        // Save to localStorage for this session (prioritize DeepSeek)
-        localStorage.setItem("deepseek_api_key", apiKey);
-        localStorage.setItem("openai_api_key", apiKey); // Also save as OpenAI for compatibility
+      let hasValidKey = false;
+
+      // Validate AI API key (DeepSeek/OpenAI)
+      if (apiKey.trim()) {
+        if (apiKey.startsWith("sk-") && apiKey.length > 20) {
+          localStorage.setItem("deepseek_api_key", apiKey);
+          localStorage.setItem("openai_api_key", apiKey);
+          hasValidKey = true;
+        } else {
+          setErrorMessage(
+            "Invalid AI API key format. API keys should start with 'sk-'"
+          );
+          setValidationStatus("error");
+          setIsValidating(false);
+          return;
+        }
+      }
+
+      // Validate Firecrawl API key
+      if (firecrawlApiKey.trim()) {
+        if (firecrawlApiKey.startsWith("fc-") && firecrawlApiKey.length > 20) {
+          localStorage.setItem("firecrawl_api_key", firecrawlApiKey);
+          hasValidKey = true;
+        } else {
+          setErrorMessage(
+            "Invalid Firecrawl API key format. API keys should start with 'fc-'"
+          );
+          setValidationStatus("error");
+          setIsValidating(false);
+          return;
+        }
+      }
+
+      if (hasValidKey) {
         setValidationStatus("success");
         setTimeout(() => {
           onClose();
-          window.location.reload(); // Reload to pick up the new API key
+          window.location.reload(); // Reload to pick up the new API keys
         }, 1500);
-      } else {
-        setErrorMessage(
-          "Invalid API key format. API keys should start with 'sk-'"
-        );
-        setValidationStatus("error");
       }
     } catch (error) {
-      setErrorMessage("Failed to validate API key");
+      setErrorMessage("Failed to validate API keys");
       setValidationStatus("error");
     } finally {
       setIsValidating(false);
@@ -50,8 +74,8 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
   };
 
   const handleTest = async () => {
-    if (!apiKey.trim()) {
-      setErrorMessage("Please enter an API key first");
+    if (!apiKey.trim() && !firecrawlApiKey.trim()) {
+      setErrorMessage("Please enter at least one API key to test");
       setValidationStatus("error");
       return;
     }
@@ -60,34 +84,63 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
     setValidationStatus("idle");
 
     try {
-      // Test the API key by making a simple call to DeepSeek first, then OpenAI
-      let response = await fetch("https://api.deepseek.com/v1/models", {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-      });
+      let aiKeyValid = false;
+      let firecrawlKeyValid = false;
 
-      // If DeepSeek fails, try OpenAI
-      if (!response.ok) {
-        response = await fetch("https://api.openai.com/v1/models", {
+      // Test AI API key if provided
+      if (apiKey.trim()) {
+        let response = await fetch("https://api.deepseek.com/v1/models", {
           headers: {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
           },
         });
+
+        // If DeepSeek fails, try OpenAI
+        if (!response.ok) {
+          response = await fetch("https://api.openai.com/v1/models", {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+          });
+        }
+
+        aiKeyValid = response.ok;
       }
 
-      if (response.ok) {
+      // Test Firecrawl API key if provided
+      if (firecrawlApiKey.trim()) {
+        try {
+          const response = await fetch("https://api.firecrawl.dev/v0/scrape", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${firecrawlApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              url: "https://example.com",
+              formats: ["markdown"],
+            }),
+          });
+          firecrawlKeyValid = response.ok;
+        } catch (error) {
+          firecrawlKeyValid = false;
+        }
+      }
+
+      if (aiKeyValid || firecrawlKeyValid) {
         setValidationStatus("success");
         setErrorMessage("");
       } else {
-        setErrorMessage("API key is invalid or has insufficient permissions");
+        setErrorMessage(
+          "One or more API keys are invalid or have insufficient permissions"
+        );
         setValidationStatus("error");
       }
     } catch (error) {
       setErrorMessage(
-        "Failed to test API key. Please check your internet connection."
+        "Failed to test API keys. Please check your internet connection."
       );
       setValidationStatus("error");
     } finally {
@@ -102,7 +155,7 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
           <div className="flex items-center space-x-2">
             <Key className="w-5 h-5 text-gray-600" />
             <h3 className="text-lg font-semibold text-gray-900">
-              AI API Configuration
+              API Configuration
             </h3>
           </div>
           <button
@@ -116,26 +169,19 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
         <div className="p-4 space-y-4">
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
             <p className="text-sm text-blue-800">
-              To use real AI responses, you need to configure your API key. Get
-              your API key from{" "}
-              <a
-                href="https://platform.deepseek.com/api_keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline hover:text-blue-800"
-              >
-                DeepSeek Platform
-              </a>{" "}
-              or{" "}
-              <a
-                href="https://platform.openai.com/api-keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline hover:text-blue-800"
-              >
-                OpenAI Platform
-              </a>
+              Configure your API keys to enable full functionality. You need at
+              least one API key:
             </p>
+            <ul className="text-xs text-blue-700 mt-2 space-y-1">
+              <li>
+                • <strong>AI API Key:</strong> For LLM tasks and structured
+                output
+              </li>
+              <li>
+                • <strong>Firecrawl API Key:</strong> For web scraping
+                functionality
+              </li>
+            </ul>
           </div>
 
           <div>
@@ -149,6 +195,50 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
               placeholder="sk-... (DeepSeek or OpenAI key)"
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
+            <div className="text-xs text-gray-500 mt-1">
+              Get your key from{" "}
+              <a
+                href="https://platform.deepseek.com/api_keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline hover:text-blue-800"
+              >
+                DeepSeek
+              </a>{" "}
+              or{" "}
+              <a
+                href="https://platform.openai.com/api-keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline hover:text-blue-800"
+              >
+                OpenAI
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Firecrawl API Key (for Web Scraping)
+            </label>
+            <input
+              type="password"
+              value={firecrawlApiKey}
+              onChange={(e) => setFirecrawlApiKey(e.target.value)}
+              placeholder="fc-... (Firecrawl API key)"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+            <div className="text-xs text-gray-500 mt-1">
+              Get your key from{" "}
+              <a
+                href="https://firecrawl.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline hover:text-blue-800"
+              >
+                Firecrawl
+              </a>
+            </div>
           </div>
 
           {validationStatus === "error" && (

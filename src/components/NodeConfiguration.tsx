@@ -11,7 +11,7 @@ interface NodeConfigurationProps {
 
 const nodeTypeConfigs = {
   webScraping: {
-    title: "Web Scraping Configuration",
+    title: "Web Scraping Configuration (Firecrawl AI)",
     fields: [
       {
         key: "url",
@@ -20,16 +20,47 @@ const nodeTypeConfigs = {
         placeholder: "https://example.com",
       },
       {
-        key: "selector",
-        label: "CSS Selector",
+        key: "formats",
+        label: "Output Formats",
+        type: "select",
+        options: ["markdown", "html", "text", "summary", "links", "images"],
+        multiple: true,
+      },
+      {
+        key: "onlyMainContent",
+        label: "Only Main Content",
+        type: "checkbox",
+        defaultValue: true,
+      },
+      {
+        key: "includeTags",
+        label: "Include Tags (comma-separated)",
         type: "text",
-        placeholder: ".content",
+        placeholder: "article, main, .content",
+      },
+      {
+        key: "excludeTags",
+        label: "Exclude Tags (comma-separated)",
+        type: "text",
+        placeholder: "nav, footer, .ads",
       },
       {
         key: "maxLength",
         label: "Max Length",
         type: "number",
-        placeholder: "1000",
+        placeholder: "5000",
+      },
+      {
+        key: "waitFor",
+        label: "Wait For (ms)",
+        type: "number",
+        placeholder: "2000",
+      },
+      {
+        key: "timeout",
+        label: "Timeout (ms)",
+        type: "number",
+        placeholder: "30000",
       },
     ],
   },
@@ -46,10 +77,7 @@ const nodeTypeConfigs = {
         key: "model",
         label: "Model",
         type: "select",
-        options: [
-          "deepseek-chat",
-          "deepseek-reasoner"
-        ],
+        options: ["deepseek-chat", "deepseek-reasoner"],
       },
       {
         key: "temperature",
@@ -117,10 +145,7 @@ const nodeTypeConfigs = {
         key: "model",
         label: "Model",
         type: "select",
-        options: [
-          "deepseek-chat",
-          "deepseek-reasoner"
-        ],
+        options: ["deepseek-chat", "deepseek-reasoner"],
       },
     ],
   },
@@ -186,7 +211,7 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
   };
 
   const renderField = (field: any) => {
-    const value = currentData.config[field.key] || "";
+    const value = currentData.config[field.key] || field.defaultValue || "";
 
     switch (field.type) {
       case "textarea":
@@ -200,6 +225,38 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
           />
         );
       case "select":
+        if (field.multiple) {
+          return (
+            <div className="space-y-2">
+              {field.options.map((option: string) => (
+                <label key={option} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={
+                      Array.isArray(value) ? value.includes(option) : false
+                    }
+                    onChange={(e) => {
+                      const currentValues = Array.isArray(value) ? value : [];
+                      if (e.target.checked) {
+                        handleConfigChange(field.key, [
+                          ...currentValues,
+                          option,
+                        ]);
+                      } else {
+                        handleConfigChange(
+                          field.key,
+                          currentValues.filter((v: string) => v !== option)
+                        );
+                      }
+                    }}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700">{option}</span>
+                </label>
+              ))}
+            </div>
+          );
+        }
         return (
           <select
             value={value}
@@ -213,6 +270,18 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
               </option>
             ))}
           </select>
+        );
+      case "checkbox":
+        return (
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={value}
+              onChange={(e) => handleConfigChange(field.key, e.target.checked)}
+              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            <span className="text-sm text-gray-700">Enable {field.label}</span>
+          </label>
         );
       case "number":
         return (
