@@ -25,10 +25,11 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
 
     try {
       // In a real app, you'd validate the API key with a backend service
-      // For now, we'll just check if it looks like a valid OpenAI API key format
+      // For now, we'll just check if it looks like a valid API key format
       if (apiKey.startsWith("sk-") && apiKey.length > 20) {
-        // Save to localStorage for this session
-        localStorage.setItem("openai_api_key", apiKey);
+        // Save to localStorage for this session (prioritize DeepSeek)
+        localStorage.setItem("deepseek_api_key", apiKey);
+        localStorage.setItem("openai_api_key", apiKey); // Also save as OpenAI for compatibility
         setValidationStatus("success");
         setTimeout(() => {
           onClose();
@@ -36,7 +37,7 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
         }, 1500);
       } else {
         setErrorMessage(
-          "Invalid API key format. OpenAI API keys should start with 'sk-'"
+          "Invalid API key format. API keys should start with 'sk-'"
         );
         setValidationStatus("error");
       }
@@ -59,13 +60,23 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
     setValidationStatus("idle");
 
     try {
-      // Test the API key by making a simple call
-      const response = await fetch("https://api.openai.com/v1/models", {
+      // Test the API key by making a simple call to DeepSeek first, then OpenAI
+      let response = await fetch("https://api.deepseek.com/v1/models", {
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
       });
+
+      // If DeepSeek fails, try OpenAI
+      if (!response.ok) {
+        response = await fetch("https://api.openai.com/v1/models", {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+        });
+      }
 
       if (response.ok) {
         setValidationStatus("success");
@@ -91,7 +102,7 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
           <div className="flex items-center space-x-2">
             <Key className="w-5 h-5 text-gray-600" />
             <h3 className="text-lg font-semibold text-gray-900">
-              OpenAI API Configuration
+              AI API Configuration
             </h3>
           </div>
           <button
@@ -105,8 +116,17 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
         <div className="p-4 space-y-4">
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
             <p className="text-sm text-blue-800">
-              To use real AI responses, you need to configure your OpenAI API
-              key. Get your API key from{" "}
+              To use real AI responses, you need to configure your API key. Get
+              your API key from{" "}
+              <a
+                href="https://platform.deepseek.com/api_keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline hover:text-blue-800"
+              >
+                DeepSeek Platform
+              </a>{" "}
+              or{" "}
               <a
                 href="https://platform.openai.com/api-keys"
                 target="_blank"
@@ -120,13 +140,13 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              OpenAI API Key
+              AI API Key (DeepSeek or OpenAI)
             </label>
             <input
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
+              placeholder="sk-... (DeepSeek or OpenAI key)"
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
@@ -164,7 +184,7 @@ export const OpenAIConfig: React.FC<OpenAIConfigProps> = ({ onClose }) => {
 
           <div className="text-xs text-gray-500">
             <p>• Your API key is stored locally in your browser</p>
-            <p>• It's only used to make requests to OpenAI's API</p>
+            <p>• It's used to make requests to DeepSeek or OpenAI APIs</p>
             <p>• You can change it anytime by reopening this dialog</p>
           </div>
         </div>

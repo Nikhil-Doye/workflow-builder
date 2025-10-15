@@ -3,15 +3,16 @@ import OpenAI from "openai";
 // Get API key from environment or localStorage
 const getApiKey = (): string => {
   return (
-    localStorage.getItem("openai_api_key") ||
-    process.env.REACT_APP_OPENAI_API_KEY ||
+    localStorage.getItem("deepseek_api_key") ||
+    process.env.REACT_APP_DEEPSEEK_API_KEY ||
     ""
   );
 };
 
-// Initialize OpenAI client
+// Initialize OpenAI client for DeepSeek
 const openai = new OpenAI({
   apiKey: getApiKey(),
+  baseURL: "https://api.deepseek.com/v1", // DeepSeek API endpoint
   dangerouslyAllowBrowser: true, // Only for development - in production, use a backend
 });
 
@@ -37,9 +38,13 @@ export const callOpenAI = async (
   try {
     // Check if API key is configured
     const apiKey = getApiKey();
-    if (!apiKey || apiKey === "your_openai_api_key_here") {
+    if (
+      !apiKey ||
+      apiKey === "your_openai_api_key_here" ||
+      apiKey === "your_deepseek_api_key_here"
+    ) {
       throw new Error(
-        "OpenAI API key not configured. Please configure your API key in the settings."
+        "DeepSeek API key not configured. Please configure your API key in the settings."
       );
     }
 
@@ -76,7 +81,7 @@ export const callOpenAI = async (
 
     // Return a fallback response if API fails
     return {
-      content: `Error calling OpenAI API: ${
+      content: `Error calling DeepSeek API: ${
         error instanceof Error ? error.message : "Unknown error"
       }. Please check your API key and try again.`,
     };
@@ -85,10 +90,7 @@ export const callOpenAI = async (
 
 export const getAvailableModels = (): string[] => {
   return [
-    "gpt-3.5-turbo",
-    "gpt-3.5-turbo-16k",
-    "gpt-4",
-    "gpt-4-turbo-preview",
-    "gpt-4-32k",
+    "deepseek-chat",
+    "deepseek-reasoner"
   ];
 };
