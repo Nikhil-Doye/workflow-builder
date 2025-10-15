@@ -35,7 +35,7 @@ export const TestingPanel: React.FC = () => {
     if (!currentWorkflow) return;
 
     setTestResults(null);
-    await executeWorkflow();
+    await executeWorkflow(testInput);
 
     // Collect all results
     const results = currentWorkflow.nodes.map((node) => ({

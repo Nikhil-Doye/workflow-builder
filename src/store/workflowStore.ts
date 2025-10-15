@@ -7,6 +7,7 @@ import {
   NodeStatus,
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
+import { callOpenAI, OpenAIConfig } from "../services/openaiService";
 
 interface WorkflowStore {
   workflows: Workflow[];
@@ -37,7 +38,7 @@ interface WorkflowStore {
   deleteEdge: (edgeId: string) => void;
 
   // Execution
-  executeWorkflow: () => Promise<void>;
+  executeWorkflow: (testInput?: string) => Promise<void>;
   updateNodeStatus: (
     nodeId: string,
     status: NodeStatus,
@@ -212,23 +213,68 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     }));
   },
 
-  executeWorkflow: async () => {
+  executeWorkflow: async (testInput?: string) => {
     const { currentWorkflow } = get();
     if (!currentWorkflow) return;
 
     set({ isExecuting: true, executionResults: {} });
 
     try {
-      // Simple execution logic - in a real app, this would call your backend
-      for (const node of currentWorkflow.nodes) {
+      // Find the first data input node to start with
+      const dataInputNode = currentWorkflow.nodes.find(
+        (node) => node.data.type === "dataInput"
+      );
+
+      if (!dataInputNode) {
+        console.error("No data input node found in workflow");
+        return;
+      }
+
+      // Start with the data input node
+      get().updateNodeStatus(dataInputNode.id, "running");
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Use test input if provided, otherwise use the node's default value
+      const inputData =
+        testInput || dataInputNode.data.config.defaultValue || "";
+      const dataInputResult = { output: inputData };
+      get().updateNodeStatus(dataInputNode.id, "success", dataInputResult);
+
+      // Process remaining nodes in order
+      const remainingNodes = currentWorkflow.nodes.filter(
+        (node) => node.id !== dataInputNode.id
+      );
+
+      for (const node of remainingNodes) {
         get().updateNodeStatus(node.id, "running");
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
-        // Simulate processing time
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Process node based on type
+        let result;
+        switch (node.data.type) {
+          case "llmTask":
+            result = await processLLMNode(node, inputData);
+            break;
+          case "dataOutput":
+            result = await processDataOutputNode(node, inputData);
+            break;
+          case "webScraping":
+            result = await processWebScrapingNode(node, inputData);
+            break;
+          case "embeddingGenerator":
+            result = await processEmbeddingNode(node, inputData);
+            break;
+          case "similaritySearch":
+            result = await processSimilaritySearchNode(node, inputData);
+            break;
+          case "structuredOutput":
+            result = await processStructuredOutputNode(node, inputData);
+            break;
+          default:
+            result = { output: `Processed by ${node.data.type} node` };
+        }
 
-        // Mock execution result
-        const mockResult = { output: `Processed by ${node.data.type} node` };
-        get().updateNodeStatus(node.id, "success", mockResult);
+        get().updateNodeStatus(node.id, "success", result);
       }
     } catch (error) {
       console.error("Workflow execution failed:", error);
@@ -261,3 +307,145 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     set({ executionResults: {}, isExecuting: false });
   },
 }));
+
+// Node processing functions
+const processLLMNode = async (node: WorkflowNode, inputData: string) => {
+  const config = node.data.config;
+  const prompt = config.prompt || "Process the following input: {{input}}";
+  const model = config.model || "gpt-3.5-turbo";
+  const temperature = config.temperature || 0.7;
+  const maxTokens = config.maxTokens || 1000;
+
+  // Replace {{input}} placeholder with actual input data
+  const processedPrompt = prompt.replace(/\{\{input\}\}/g, inputData);
+
+  try {
+    // Call OpenAI API
+    const openaiConfig: OpenAIConfig = {
+      model,
+      temperature,
+      maxTokens,
+    };
+
+    const response = await callOpenAI(processedPrompt, openaiConfig);
+
+    return {
+      output: response.content,
+      prompt: processedPrompt,
+      model,
+      temperature,
+      maxTokens,
+      usage: response.usage,
+    };
+  } catch (error) {
+    console.error("Error processing LLM node:", error);
+
+    // Fallback to mock response if API fails
+    const fallbackResponse = `Error calling OpenAI API: ${
+      error instanceof Error ? error.message : "Unknown error"
+    }. Please check your API key and try again.`;
+
+    return {
+      output: fallbackResponse,
+      prompt: processedPrompt,
+      model,
+      temperature,
+      maxTokens,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+const processDataOutputNode = async (node: WorkflowNode, inputData: string) => {
+  const config = node.data.config;
+  const format = config.format || "text";
+  const filename = config.filename || "output.txt";
+
+  let output;
+  switch (format) {
+    case "json":
+      output = JSON.stringify(
+        { data: inputData, timestamp: new Date().toISOString() },
+        null,
+        2
+      );
+      break;
+    case "csv":
+      output = `data\n"${inputData}"`;
+      break;
+    default:
+      output = inputData;
+  }
+
+  return { output, format, filename };
+};
+
+const processWebScrapingNode = async (
+  node: WorkflowNode,
+  inputData: string
+) => {
+  const config = node.data.config;
+  const url = config.url || inputData;
+  const selector = config.selector || "body";
+  const maxLength = config.maxLength || 1000;
+
+  // In a real app, this would perform actual web scraping
+  const mockScrapedContent = `Scraped content from ${url} using selector "${selector}": ${inputData.substring(
+    0,
+    maxLength
+  )}...`;
+
+  return { output: mockScrapedContent, url, selector };
+};
+
+const processEmbeddingNode = async (node: WorkflowNode, inputData: string) => {
+  const config = node.data.config;
+  const model = config.model || "text-embedding-ada-002";
+  const dimensions = config.dimensions || 1536;
+
+  // In a real app, this would generate actual embeddings
+  const mockEmbedding = Array.from({ length: dimensions }, () => Math.random());
+
+  return { output: mockEmbedding, model, dimensions };
+};
+
+const processSimilaritySearchNode = async (
+  node: WorkflowNode,
+  inputData: string
+) => {
+  const config = node.data.config;
+  const vectorStore = config.vectorStore || "pinecone";
+  const topK = config.topK || 5;
+  const threshold = config.threshold || 0.8;
+
+  // In a real app, this would perform actual similarity search
+  const mockResults = Array.from({ length: topK }, (_, i) => ({
+    id: `result_${i + 1}`,
+    content: `Similar content ${i + 1} for: ${inputData}`,
+    similarity: threshold + Math.random() * (1 - threshold),
+  }));
+
+  return { output: mockResults, vectorStore, topK, threshold };
+};
+
+const processStructuredOutputNode = async (
+  node: WorkflowNode,
+  inputData: string
+) => {
+  const config = node.data.config;
+  const schema = config.schema || '{"type": "object"}';
+  const model = config.model || "gpt-3.5-turbo";
+
+  // In a real app, this would use an LLM to structure the data according to the schema
+  const mockStructuredOutput = {
+    input: inputData,
+    structured: {
+      text: inputData,
+      length: inputData.length,
+      timestamp: new Date().toISOString(),
+    },
+    schema: JSON.parse(schema),
+  };
+
+  return { output: mockStructuredOutput, model, schema };
+};

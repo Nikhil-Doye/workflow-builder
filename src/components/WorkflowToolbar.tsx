@@ -1,10 +1,19 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { useWorkflowStore } from "../store/workflowStore";
-import { Download, Upload, Save, Play, Square, RotateCcw } from "lucide-react";
+import {
+  Download,
+  Upload,
+  Save,
+  Play,
+  Square,
+  RotateCcw,
+  Settings,
+} from "lucide-react";
 import {
   downloadWorkflow,
   loadWorkflowFromFile,
 } from "../utils/workflowSerialization";
+import { OpenAIConfig } from "./OpenAIConfig";
 
 export const WorkflowToolbar: React.FC = () => {
   const {
@@ -16,6 +25,7 @@ export const WorkflowToolbar: React.FC = () => {
   } = useWorkflowStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showOpenAIConfig, setShowOpenAIConfig] = useState(false);
 
   const handleSave = () => {
     if (currentWorkflow) {
@@ -101,6 +111,15 @@ export const WorkflowToolbar: React.FC = () => {
           <span>Import</span>
         </button>
 
+        <button
+          onClick={() => setShowOpenAIConfig(true)}
+          className="flex items-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+          title="Configure OpenAI API"
+        >
+          <Settings className="w-4 h-4" />
+          <span>AI Config</span>
+        </button>
+
         <div className="w-px h-6 bg-gray-300" />
 
         <button
@@ -139,6 +158,11 @@ export const WorkflowToolbar: React.FC = () => {
         onChange={handleFileChange}
         className="hidden"
       />
+
+      {/* OpenAI Configuration Modal */}
+      {showOpenAIConfig && (
+        <OpenAIConfig onClose={() => setShowOpenAIConfig(false)} />
+      )}
     </div>
   );
 };

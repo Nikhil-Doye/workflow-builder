@@ -1,0 +1,99 @@
+{
+  "id": "c69ca19c-4174-4ec5-b2f8-6f941d1cd796",
+  "name": "Workflow 1760487469928",
+  "nodes": [
+    {
+      "id": "57861f51-a1ed-4efe-8646-3564de2cac10",
+      "type": "dataInput",
+      "position": {
+        "x": 372,
+        "y": 87
+      },
+      "data": {
+        "id": "960e2857-f602-46a9-af43-ec932d77153e",
+        "type": "dataInput",
+        "label": "dataInput Node",
+        "status": "success",
+        "config": {
+          "defaultValue": "Hello World!",
+          "dataType": "text"
+        },
+        "inputs": [],
+        "outputs": [
+          {
+            "output": "What is today's date?"
+          }
+        ]
+      }
+    },
+    {
+      "id": "d11a7455-c591-4606-9e7f-11b002e8c20d",
+      "type": "llmTask",
+      "position": {
+        "x": 436.75,
+        "y": 118.75
+      },
+      "data": {
+        "id": "d52f145f-1fa6-415c-aca7-ca11895f3991",
+        "type": "llmTask",
+        "label": "llmTask Node",
+        "status": "success",
+        "config": {
+          "model": "gpt-3.5-turbo",
+          "temperature": 0.7,
+          "prompt": "Analyze the following text and provide insights: {{input}}"
+        },
+        "inputs": [],
+        "outputs": [
+          {
+            "output": "LLM Response (gpt-3.5-turbo): Analyze the following text and provide insights: What is today's date?",
+            "prompt": "Analyze the following text and provide insights: What is today's date?",
+            "model": "gpt-3.5-turbo"
+          }
+        ]
+      }
+    },
+    {
+      "id": "40d139ed-8290-4d14-8c1a-940c2927105a",
+      "type": "dataOutput",
+      "position": {
+        "x": 504.5575564762356,
+        "y": 309.2556953849361
+      },
+      "data": {
+        "id": "9b38825f-ae74-491f-b088-36969d87385d",
+        "type": "dataOutput",
+        "label": "dataOutput Node",
+        "status": "success",
+        "config": {
+          "format": "text",
+          "filename": "analysis.txt"
+        },
+        "inputs": [],
+        "outputs": [
+          {
+            "output": "What is today's date?",
+            "format": "text",
+            "filename": "analysis.txt"
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "0e841dba-cdb5-4738-8311-2ec1c426c0a5",
+      "source": "57861f51-a1ed-4efe-8646-3564de2cac10",
+      "target": "d11a7455-c591-4606-9e7f-11b002e8c20d"
+    },
+    {
+      "id": "5447100b-4949-406f-a3e8-9f8dd336eeef",
+      "source": "d11a7455-c591-4606-9e7f-11b002e8c20d",
+      "target": "40d139ed-8290-4d14-8c1a-940c2927105a"
+    }
+  ],
+  "createdAt": "2025-10-15T00:17:49.928Z",
+  "updatedAt": "2025-10-15T00:20:17.205Z",
+  "exportedAt": "2025-10-15T00:22:18.078Z",
+  "version": "1.0.0"
+}
