@@ -1,4 +1,4 @@
-import FirecrawlApp from "@mendable/firecrawl-js";
+import Firecrawl from "@mendable/firecrawl-js";
 
 // Get API key from environment or localStorage
 const getFirecrawlApiKey = (): string => {
@@ -11,27 +11,59 @@ const getFirecrawlApiKey = (): string => {
 
 export interface FirecrawlConfig {
   url: string;
-  formats?: ("markdown" | "html" | "text" | "summary" | "links" | "images")[];
+  formats?: (
+    | "markdown"
+    | "html"
+    | "rawHtml"
+    | "summary"
+    | "links"
+    | "images"
+    | "screenshot"
+    | "json"
+  )[];
   includeTags?: string[];
   excludeTags?: string[];
   onlyMainContent?: boolean;
   maxLength?: number;
   waitFor?: number;
   timeout?: number;
+  maxAge?: number;
+  storeInCache?: boolean;
+  actions?: any[];
+  location?: {
+    country?: string;
+    languages?: string[];
+  };
 }
 
 export interface FirecrawlResponse {
   success: boolean;
   data?: {
-    content: string;
     markdown?: string;
     html?: string;
+    rawHtml?: string;
+    summary?: string;
+    links?: string[];
+    images?: string[];
+    screenshot?: string;
+    json?: any;
     metadata?: {
       title?: string;
       description?: string;
       language?: string;
+      keywords?: string;
+      robots?: string;
+      ogTitle?: string;
+      ogDescription?: string;
+      ogUrl?: string;
+      ogImage?: string;
+      ogSiteName?: string;
       sourceURL?: string;
-      createdAt?: string;
+      statusCode?: number;
+    };
+    actions?: {
+      screenshots?: string[];
+      scrapes?: any[];
     };
   };
   error?: string;
@@ -50,7 +82,7 @@ export const scrapeWithFirecrawl = async (
     }
 
     // Initialize Firecrawl client with the current API key
-    const firecrawl = new FirecrawlApp({
+    const firecrawl = new Firecrawl({
       apiKey: apiKey,
     });
 
@@ -60,6 +92,7 @@ export const scrapeWithFirecrawl = async (
       onlyMainContent: config.onlyMainContent !== false, // Default to true
     };
 
+    // Add optional parameters
     if (config.includeTags && config.includeTags.length > 0) {
       scrapeOptions.includeTags = config.includeTags;
     }
@@ -68,42 +101,51 @@ export const scrapeWithFirecrawl = async (
       scrapeOptions.excludeTags = config.excludeTags;
     }
 
-    if (config.waitFor) {
+    if (config.waitFor !== undefined) {
       scrapeOptions.waitFor = config.waitFor;
     }
 
-    if (config.timeout) {
+    if (config.timeout !== undefined) {
       scrapeOptions.timeout = config.timeout;
     }
 
-    // Perform the scrape using the correct method name
-    const scrapeResult = await firecrawl.scrape(config.url, scrapeOptions);
-
-    if (!scrapeResult.success) {
-      throw new Error(scrapeResult.error || "Failed to scrape URL");
+    if (config.maxAge !== undefined) {
+      scrapeOptions.maxAge = config.maxAge;
     }
 
-    const data = scrapeResult.data;
-    let content = data.markdown || data.html || data.content || "";
+    if (config.storeInCache !== undefined) {
+      scrapeOptions.storeInCache = config.storeInCache;
+    }
 
-    // Apply max length if specified
-    if (config.maxLength && content.length > config.maxLength) {
-      content = content.substring(0, config.maxLength) + "...";
+    if (config.actions) {
+      scrapeOptions.actions = config.actions;
+    }
+
+    if (config.location) {
+      scrapeOptions.location = config.location;
+    }
+
+    // Perform the scrape - SDK returns data directly
+    const data = await firecrawl.scrape(config.url, scrapeOptions);
+
+    // Apply max length to markdown if specified
+    if (config.maxLength && data.markdown) {
+      data.markdown = data.markdown.substring(0, config.maxLength) + "...";
     }
 
     return {
       success: true,
       data: {
-        content,
         markdown: data.markdown,
         html: data.html,
-        metadata: {
-          title: data.metadata?.title,
-          description: data.metadata?.description,
-          language: data.metadata?.language,
-          sourceURL: config.url,
-          createdAt: new Date().toISOString(),
-        },
+        rawHtml: data.rawHtml,
+        summary: data.summary,
+        links: data.links,
+        images: data.images,
+        screenshot: data.screenshot,
+        json: data.json,
+        //  metadata: data.metadata,
+        actions: data.actions,
       },
     };
   } catch (error) {
@@ -120,4 +162,40 @@ export const scrapeWithFirecrawl = async (
 export const getFirecrawlApiKeyStatus = (): boolean => {
   const apiKey = getFirecrawlApiKey();
   return !!(apiKey && apiKey !== "your_firecrawl_api_key_here");
+};
+
+// New helper function for batch scraping
+export const batchScrapeWithFirecrawl = async (
+  urls: string[],
+  config?: Omit<FirecrawlConfig, "url">
+): Promise<any> => {
+  try {
+    const apiKey = getFirecrawlApiKey();
+    if (!apiKey || apiKey === "your_firecrawl_api_key_here") {
+      throw new Error(
+        "Firecrawl API key not configured. Please configure your API key in the settings."
+      );
+    }
+
+    const firecrawl = new Firecrawl({
+      apiKey: apiKey,
+    });
+
+    const options = {
+      formats: config?.formats || ["markdown", "html"],
+      ...(config?.onlyMainContent !== undefined && {
+        onlyMainContent: config.onlyMainContent,
+      }),
+      ...(config?.timeout && { timeout: config.timeout }),
+      ...(config?.maxAge !== undefined && { maxAge: config.maxAge }),
+    };
+
+    // Use the batch_scrape method (synchronous version)
+    const result = await firecrawl.batchScrape(urls, options);
+
+    return result;
+  } catch (error) {
+    console.error("Batch scrape error:", error);
+    throw error;
+  }
 };
