@@ -499,7 +499,7 @@ const processWebScrapingNode = async (
 
     if (result.success && result.data) {
       return {
-        output: result.data.content,
+        output: result.data,
         url,
         metadata: result.data.metadata,
         markdown: result.data.markdown,
