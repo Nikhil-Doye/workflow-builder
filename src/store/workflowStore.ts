@@ -551,10 +551,37 @@ const processWebScrapingNode = async (
     Array.from(nodeOutputs.values()).pop()?.output ||
     "";
 
+  // Sanitize requested formats: map unsupported values and dedupe
+  const allowedFormats = new Set([
+    "markdown",
+    "html",
+    "rawHtml",
+    "summary",
+    "links",
+    "images",
+    "screenshot",
+    "json",
+  ]);
+  const requestedFormats: string[] = Array.isArray(config.formats)
+    ? config.formats
+    : ["markdown", "html"];
+  const normalizedFormats = Array.from(
+    new Set([
+      ...requestedFormats
+        .map((fmt: string) => (fmt === "text" ? "markdown" : fmt))
+        .filter((fmt: string) => allowedFormats.has(fmt)),
+      // Always include markdown as a safe fallback
+      "markdown",
+    ])
+  );
+
   // Prepare Firecrawl configuration
   const firecrawlConfig: FirecrawlConfig = {
     url,
-    formats: config.formats || ["markdown", "html"],
+    formats:
+      normalizedFormats.length > 0
+        ? (normalizedFormats as FirecrawlConfig["formats"])
+        : (["markdown"] as FirecrawlConfig["formats"]),
     onlyMainContent: config.onlyMainContent !== false,
     maxLength: config.maxLength || 5000,
     waitFor: config.waitFor || 2000,
@@ -581,14 +608,48 @@ const processWebScrapingNode = async (
     const result = await scrapeWithFirecrawl(firecrawlConfig);
 
     if (result.success && result.data) {
+      // Choose a string output suitable for downstream LLM nodes
+      const preferredOrder = [
+        "markdown",
+        "html",
+        "rawHtml",
+        "summary",
+      ] as const;
+      let chosenText: string = "";
+      for (const key of preferredOrder) {
+        const val = (result.data as any)[key];
+        if (typeof val === "string" && val.trim().length > 0) {
+          chosenText = val;
+          break;
+        }
+      }
+      if (!chosenText && result.data.json) {
+        try {
+          chosenText = JSON.stringify(result.data.json);
+        } catch {
+          chosenText = String(result.data.json);
+        }
+      }
+
+      // Enforce maxLength if configured
+      const maxLen =
+        typeof config.maxLength === "number" ? config.maxLength : 0;
+      if (
+        maxLen > 0 &&
+        typeof chosenText === "string" &&
+        chosenText.length > maxLen
+      ) {
+        chosenText = chosenText.slice(0, maxLen);
+      }
+
       return {
-        output: result.data,
+        output: chosenText || result.data.markdown || result.data.html || "",
         url,
         metadata: result.data.metadata,
         markdown: result.data.markdown,
         html: result.data.html,
-        formats: config.formats || ["markdown", "html"],
-        onlyMainContent: config.onlyMainContent !== false,
+        formats: firecrawlConfig.formats,
+        onlyMainContent: firecrawlConfig.onlyMainContent,
       };
     } else {
       throw new Error(result.error || "Failed to scrape URL with Firecrawl");
