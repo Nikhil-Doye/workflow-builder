@@ -108,6 +108,14 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     setShowConfig(false);
   }, [selectNode]);
 
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedNodeId) {
+      deleteNode(selectedNodeId);
+      setShowConfig(false);
+      selectNode(null);
+    }
+  }, [selectedNodeId, deleteNode, selectNode]);
+
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -246,6 +254,15 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
           >
             {showNodePalette ? "Hide" : "Show"} Node Palette
           </button>
+          {selectedNodeId && (
+            <button
+              onClick={handleDeleteSelected}
+              className="ml-2 px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+              title="Delete selected node"
+            >
+              Delete Node
+            </button>
+          )}
           <button
             onClick={onClose}
             className="ml-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
