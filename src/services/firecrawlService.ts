@@ -84,72 +84,115 @@ export const scrapeWithFirecrawl = async (
     // Initialize Firecrawl client with the current API key
     const firecrawl = new Firecrawl({
       apiKey: apiKey,
+      // Add base URL if needed
+      // baseURL: 'https://api.firecrawl.dev/v0'
     });
 
-    // Prepare the scrape options according to Firecrawl v2 API
+    // Validate URL
+    const url = (config.url || "").trim();
+    if (!/^https?:\/\//i.test(url)) {
+      throw new Error(
+        `Invalid URL provided to Firecrawl: "${config.url}". URL must start with http:// or https://`
+      );
+    }
+
+    // Prepare a minimal, whitelisted options object per Firecrawl v2
+    // Some undocumented keys can cause 400 errors; keep this strict.
     const scrapeOptions: any = {
-      formats: config.formats || ["markdown", "html"],
-      onlyMainContent: config.onlyMainContent !== false, // Default to true
+      formats:
+        config.formats && config.formats.length > 0
+          ? config.formats
+          : ["markdown"],
+      onlyMainContent: config.onlyMainContent !== false,
+      ...(config.timeout !== undefined ? { timeout: config.timeout } : {}),
+      ...(config.location ? { location: config.location } : {}),
     };
-
-    // Add optional parameters
-    if (config.includeTags && config.includeTags.length > 0) {
-      scrapeOptions.includeTags = config.includeTags;
-    }
-
-    if (config.excludeTags && config.excludeTags.length > 0) {
-      scrapeOptions.excludeTags = config.excludeTags;
-    }
-
-    if (config.waitFor !== undefined) {
-      scrapeOptions.waitFor = config.waitFor;
-    }
-
-    if (config.timeout !== undefined) {
-      scrapeOptions.timeout = config.timeout;
-    }
-
-    if (config.maxAge !== undefined) {
-      scrapeOptions.maxAge = config.maxAge;
-    }
-
-    if (config.storeInCache !== undefined) {
-      scrapeOptions.storeInCache = config.storeInCache;
-    }
-
-    if (config.actions) {
-      scrapeOptions.actions = config.actions;
-    }
-
-    if (config.location) {
-      scrapeOptions.location = config.location;
-    }
 
     // Perform the scrape - SDK returns data directly
-    const data = await firecrawl.scrape(config.url, scrapeOptions);
+    console.log("Firecrawl API Call - URL:", config.url);
+    console.log("Firecrawl API Call - Options:", scrapeOptions);
+    console.log(
+      "Firecrawl API Call - API Key:",
+      apiKey.substring(0, 10) + "..."
+    );
 
-    // Apply max length to markdown if specified
-    if (config.maxLength && data.markdown) {
-      data.markdown = data.markdown.substring(0, config.maxLength) + "...";
+    try {
+      // First attempt with provided options
+      const data = await firecrawl.scrape(url, scrapeOptions);
+      console.log("Firecrawl API Response:", data);
+
+      if (!data) {
+        throw new Error("No data returned from Firecrawl API");
+      }
+
+      return {
+        success: true,
+        data: {
+          markdown: data.markdown,
+          html: data.html,
+          rawHtml: data.rawHtml,
+          summary: data.summary,
+          links: data.links,
+          images: data.images,
+          screenshot: data.screenshot,
+          json: data.json,
+          //  metadata: data.metadata,
+          actions: data.actions,
+        },
+      };
+    } catch (apiError) {
+      // Extract as much detail as possible from the error
+      const anyErr: any = apiError as any;
+      const status = anyErr?.status || anyErr?.response?.status;
+      const body = anyErr?.response?.data || anyErr?.data || anyErr?.message;
+      console.error("Firecrawl API Call Error:", {
+        status,
+        body,
+      });
+
+      // If it's a 400 Bad Request, retry once with ultra-minimal options
+      if (status === 400) {
+        const minimalOptions = {
+          formats: ["markdown"],
+          onlyMainContent: true,
+        } as const;
+        console.warn(
+          "Retrying Firecrawl.scrape with minimal options:",
+          minimalOptions
+        );
+        const retryData = await firecrawl.scrape(url, minimalOptions as any);
+        if (!retryData) {
+          throw new Error("No data returned from Firecrawl API (after retry)");
+        }
+        return {
+          success: true,
+          data: {
+            markdown: retryData.markdown,
+            html: retryData.html,
+            rawHtml: retryData.rawHtml,
+            summary: retryData.summary,
+            links: retryData.links,
+            images: retryData.images,
+            screenshot: retryData.screenshot,
+            json: retryData.json,
+            actions: retryData.actions,
+          },
+        };
+      }
+
+      throw new Error(
+        `Firecrawl request failed${status ? ` (status ${status})` : ""}: ${
+          typeof body === "string" ? body : JSON.stringify(body)
+        }`
+      );
     }
-
-    return {
-      success: true,
-      data: {
-        markdown: data.markdown,
-        html: data.html,
-        rawHtml: data.rawHtml,
-        summary: data.summary,
-        links: data.links,
-        images: data.images,
-        screenshot: data.screenshot,
-        json: data.json,
-        //  metadata: data.metadata,
-        actions: data.actions,
-      },
-    };
   } catch (error) {
     console.error("Firecrawl API Error:", error);
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
 
     // Return a fallback response if API fails
     return {

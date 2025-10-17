@@ -1,0 +1,141 @@
+{
+  "id": "b2020ae4-e010-49af-8673-36c128438ec4",
+  "name": "Workflow 1760727761212",
+  "nodes": [
+    {
+      "id": "4747e8b4-c1cb-4c56-9ca8-cab73543c909",
+      "type": "dataInput",
+      "position": {
+        "x": 353,
+        "y": 63
+      },
+      "data": {
+        "id": "5fa3cdfe-9c5a-4b78-95d8-dc1e74b627bb",
+        "type": "dataInput",
+        "label": "dataInput Node",
+        "status": "success",
+        "config": {
+          "dataType": "url",
+          "defaultValue": "https://www.example.com"
+        },
+        "inputs": [],
+        "outputs": [
+          {
+            "output": "https://vesterai.com/"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3d26cd62-8f6b-449e-beaa-864683d5ccb4",
+      "type": "webScraping",
+      "position": {
+        "x": 425.8264547480898,
+        "y": 123.15899777101305
+      },
+      "data": {
+        "id": "38dcf0c1-a1e8-432b-ac38-479cc2e60150",
+        "type": "webScraping",
+        "label": "webScraping Node",
+        "status": "success",
+        "config": {
+          "formats": [
+            "text",
+            "html"
+          ],
+          "url": "{{input-1.output}}",
+          "onlyMainContent": false
+        },
+        "inputs": [],
+        "outputs": [
+          {
+            "output": "Error scraping https://vesterai.com/: Bad Request. Please check your Firecrawl API key and try again.",
+            "url": "https://vesterai.com/",
+            "error": "Bad Request"
+          }
+        ]
+      }
+    },
+    {
+      "id": "d33f8686-55c4-44e0-86a9-45290d6f6d2f",
+      "type": "llmTask",
+      "position": {
+        "x": 614.6608564428151,
+        "y": 226.6299028092187
+      },
+      "data": {
+        "id": "7666152a-79d7-44e3-b5c5-c312b9adf82d",
+        "type": "llmTask",
+        "label": "llmTask Node",
+        "status": "success",
+        "config": {
+          "prompt": "Summarize: {{scraper-1.output}}",
+          "model": "deepseek-chat",
+          "temperature": 0.7
+        },
+        "inputs": [],
+        "outputs": [
+          {
+            "output": "Based on the error message, here is a summary:\n\nAn attempt to automatically extract data (scrape) from the website `vesterai.com` failed because the request was invalid (a \"Bad Request\" error).\n\nThe most likely cause is an issue with the **Firecrawl API key**, such as:\n*   The key is missing, incorrect, or invalid.\n*   The key has expired.\n*   The associated account lacks the necessary permissions or credits.\n\n**The suggested solution is to verify that the Firecrawl API key is correct and properly configured, then try the operation again.**",
+            "prompt": "Summarize: Error scraping https://vesterai.com/: Bad Request. Please check your Firecrawl API key and try again.",
+            "model": "deepseek-chat",
+            "temperature": 0.7,
+            "maxTokens": 1000,
+            "usage": {
+              "promptTokens": 30,
+              "completionTokens": 119,
+              "totalTokens": 149
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "b6fcec2c-e976-4aa6-bca1-adbb61cfc9b9",
+      "type": "dataOutput",
+      "position": {
+        "x": 712.9582162291103,
+        "y": 265.4314921985458
+      },
+      "data": {
+        "id": "94e9b104-f049-40c9-8433-b153ab32065c",
+        "type": "dataOutput",
+        "label": "dataOutput Node",
+        "status": "success",
+        "config": {
+          "format": "json",
+          "filename": "analysis.json"
+        },
+        "inputs": [],
+        "outputs": [
+          {
+            "output": "{\n  \"data\": \"Based on the error message, here is a summary:\\n\\nAn attempt to automatically extract data (scrape) from the website `vesterai.com` failed because the request was invalid (a \\\"Bad Request\\\" error).\\n\\nThe most likely cause is an issue with the **Firecrawl API key**, such as:\\n*   The key is missing, incorrect, or invalid.\\n*   The key has expired.\\n*   The associated account lacks the necessary permissions or credits.\\n\\n**The suggested solution is to verify that the Firecrawl API key is correct and properly configured, then try the operation again.**\",\n  \"timestamp\": \"2025-10-17T19:19:51.704Z\"\n}",
+            "format": "json",
+            "filename": "analysis.json"
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "94b044ce-0f92-4f47-981e-d56c348c015b",
+      "source": "4747e8b4-c1cb-4c56-9ca8-cab73543c909",
+      "target": "3d26cd62-8f6b-449e-beaa-864683d5ccb4"
+    },
+    {
+      "id": "1f522c38-18a8-4497-ad35-034e9147c255",
+      "source": "3d26cd62-8f6b-449e-beaa-864683d5ccb4",
+      "target": "d33f8686-55c4-44e0-86a9-45290d6f6d2f"
+    },
+    {
+      "id": "e3c4d985-dcdd-4486-a3ee-325013816d7f",
+      "source": "d33f8686-55c4-44e0-86a9-45290d6f6d2f",
+      "target": "b6fcec2c-e976-4aa6-bca1-adbb61cfc9b9"
+    }
+  ],
+  "createdAt": "2025-10-17T19:02:41.212Z",
+  "updatedAt": "2025-10-17T19:19:51.704Z",
+  "exportedAt": "2025-10-17T19:20:30.000Z",
+  "version": "1.0.0"
+}
