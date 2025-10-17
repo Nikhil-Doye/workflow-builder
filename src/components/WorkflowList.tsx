@@ -1,26 +1,48 @@
 import React, { useState } from "react";
 import { useWorkflowStore } from "../store/workflowStore";
-import { Plus, Play, Trash2, Edit, FolderOpen } from "lucide-react";
+import { Plus, Play, Trash2, Edit, FolderOpen, Check, X } from "lucide-react";
 
 interface WorkflowListProps {
   onOpenWorkflow: (workflowId: string) => void;
-  onCreateWorkflow: () => void;
+  onCreateWorkflow: (workflowName?: string) => void;
 }
 
 export const WorkflowList: React.FC<WorkflowListProps> = ({
   onOpenWorkflow,
   onCreateWorkflow,
 }) => {
-  const { workflows, deleteWorkflow } = useWorkflowStore();
+  const { workflows, deleteWorkflow, updateWorkflow } = useWorkflowStore();
   const [newWorkflowName, setNewWorkflowName] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(
+    null
+  );
+  const [editingWorkflowName, setEditingWorkflowName] = useState("");
 
   const handleCreateWorkflow = () => {
     if (newWorkflowName.trim()) {
-      onCreateWorkflow();
+      onCreateWorkflow(newWorkflowName.trim());
       setNewWorkflowName("");
       setShowCreateForm(false);
     }
+  };
+
+  const handleStartEdit = (workflowId: string, currentName: string) => {
+    setEditingWorkflowId(workflowId);
+    setEditingWorkflowName(currentName);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingWorkflowId && editingWorkflowName.trim()) {
+      updateWorkflow(editingWorkflowId, { name: editingWorkflowName.trim() });
+      setEditingWorkflowId(null);
+      setEditingWorkflowName("");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingWorkflowId(null);
+    setEditingWorkflowName("");
   };
 
   const handleDeleteWorkflow = (
@@ -122,27 +144,79 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
               <div
                 key={workflow.id}
                 className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => onOpenWorkflow(workflow.id)}
+                onClick={() =>
+                  editingWorkflowId !== workflow.id &&
+                  onOpenWorkflow(workflow.id)
+                }
               >
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {workflow.name}
-                  </h3>
+                  {editingWorkflowId === workflow.id ? (
+                    <div className="flex-1 mr-2">
+                      <input
+                        type="text"
+                        value={editingWorkflowName}
+                        onChange={(e) => setEditingWorkflowName(e.target.value)}
+                        className="w-full px-2 py-1 text-lg font-semibold text-gray-900 border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        onKeyPress={(e) =>
+                          e.key === "Enter" && handleSaveEdit()
+                        }
+                        onKeyDown={(e) =>
+                          e.key === "Escape" && handleCancelEdit()
+                        }
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {workflow.name}
+                    </h3>
+                  )}
                   <div className="flex space-x-2">
-                    <button
-                      onClick={(e) => handleExecuteWorkflow(workflow.id, e)}
-                      className="p-1 text-gray-400 hover:text-primary-500 transition-colors"
-                      title="Execute workflow"
-                    >
-                      <Play className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => handleDeleteWorkflow(workflow.id, e)}
-                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                      title="Delete workflow"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {editingWorkflowId === workflow.id ? (
+                      <>
+                        <button
+                          onClick={handleSaveEdit}
+                          className="p-1 text-green-600 hover:text-green-700 transition-colors"
+                          title="Save changes"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                          title="Cancel editing"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartEdit(workflow.id, workflow.name);
+                          }}
+                          className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                          title="Edit workflow name"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => handleExecuteWorkflow(workflow.id, e)}
+                          className="p-1 text-gray-400 hover:text-primary-500 transition-colors"
+                          title="Execute workflow"
+                        >
+                          <Play className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteWorkflow(workflow.id, e)}
+                          className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                          title="Delete workflow"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 

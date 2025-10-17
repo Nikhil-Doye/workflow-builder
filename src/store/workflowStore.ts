@@ -72,6 +72,7 @@ interface WorkflowStore {
   createWorkflow: (name: string) => void;
   loadWorkflow: (workflowId: string) => void;
   saveWorkflow: () => void;
+  updateWorkflow: (workflowId: string, updates: Partial<Workflow>) => void;
   deleteWorkflow: (workflowId: string) => void;
   clearAllWorkflows: () => void;
 
@@ -160,6 +161,27 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         console.log(`Workflow "${currentWorkflow.name}" saved successfully`);
       }
     }
+  },
+
+  updateWorkflow: (workflowId: string, updates: Partial<Workflow>) => {
+    const newWorkflows = get().workflows.map((w) =>
+      w.id === workflowId ? { ...w, ...updates, updatedAt: new Date() } : w
+    );
+
+    set({
+      workflows: newWorkflows,
+      currentWorkflow:
+        get().currentWorkflow?.id === workflowId
+          ? ({
+              ...get().currentWorkflow,
+              ...updates,
+              updatedAt: new Date(),
+            } as Workflow)
+          : get().currentWorkflow,
+    });
+
+    // Persist to localStorage
+    saveWorkflowsToStorage(newWorkflows);
   },
 
   deleteWorkflow: (workflowId: string) => {

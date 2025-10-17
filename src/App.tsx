@@ -12,10 +12,10 @@ function App() {
   const [, setCurrentWorkflowId] = useState<string | null>(null);
   const { createWorkflow, loadWorkflow } = useWorkflowStore();
 
-  const handleCreateWorkflow = () => {
-    const workflowName = `Workflow ${Date.now()}`;
-    createWorkflow(workflowName);
-    setCurrentWorkflowId(workflowName);
+  const handleCreateWorkflow = (workflowName?: string) => {
+    const name = workflowName || `Workflow ${Date.now()}`;
+    createWorkflow(name);
+    setCurrentWorkflowId(name);
     setCurrentView("editor");
   };
 
