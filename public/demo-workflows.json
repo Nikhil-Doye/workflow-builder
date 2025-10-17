@@ -33,7 +33,7 @@
             "status": "idle",
             "config": {
               "url": "{{input-1.output}}",
-              "selector": "body",
+              "formats": ["markdown", "html"],
               "maxLength": 2000
             },
             "inputs": [],
@@ -51,7 +51,7 @@
             "status": "idle",
             "config": {
               "prompt": "Analyze the following web content and provide a summary:\n\n{{scraper-1.output}}",
-              "model": "gpt-3.5-turbo",
+              "model": "deepseek-chat",
               "temperature": 0.7,
               "maxTokens": 500
             },

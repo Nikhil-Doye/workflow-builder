@@ -12,6 +12,7 @@ import {
   scrapeWithFirecrawl,
   FirecrawlConfig,
 } from "../services/firecrawlService";
+import { substituteVariables, NodeOutput } from "../utils/variableSubstitution";
 
 // localStorage key for workflows
 const WORKFLOWS_STORAGE_KEY = "agent-workflow-builder-workflows";
@@ -300,6 +301,30 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
     set({ isExecuting: true, executionResults: {} });
 
+    // Map to track node outputs for variable substitution
+    const nodeOutputs = new Map<string, NodeOutput>();
+
+    // Create a mapping from node labels to node IDs for easier variable substitution
+    const nodeLabelToId = new Map<string, string>();
+    currentWorkflow.nodes.forEach((node) => {
+      const label = node.data.label.toLowerCase().replace(/\s+/g, "-");
+      nodeLabelToId.set(label, node.id);
+      // Also map common patterns
+      if (node.data.type === "dataInput") {
+        nodeLabelToId.set("input-1", node.id);
+        nodeLabelToId.set("data-input", node.id);
+      } else if (node.data.type === "webScraping") {
+        nodeLabelToId.set("scraper-1", node.id);
+        nodeLabelToId.set("web-scraper", node.id);
+      } else if (node.data.type === "llmTask") {
+        nodeLabelToId.set("llm-1", node.id);
+        nodeLabelToId.set("llm-task", node.id);
+      } else if (node.data.type === "dataOutput") {
+        nodeLabelToId.set("output-1", node.id);
+        nodeLabelToId.set("data-output", node.id);
+      }
+    });
+
     try {
       // Find the first data input node to start with
       const dataInputNode = currentWorkflow.nodes.find(
@@ -321,6 +346,14 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       const dataInputResult = { output: inputData };
       get().updateNodeStatus(dataInputNode.id, "success", dataInputResult);
 
+      // Store the data input node's output for variable substitution
+      nodeOutputs.set(dataInputNode.id, {
+        nodeId: dataInputNode.id,
+        output: inputData,
+        data: dataInputResult,
+        status: "success",
+      });
+
       // Process remaining nodes in order
       const remainingNodes = currentWorkflow.nodes.filter(
         (node) => node.id !== dataInputNode.id
@@ -330,32 +363,60 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         get().updateNodeStatus(node.id, "running");
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        // Process node based on type
+        // Process node based on type with variable substitution
         let result;
         switch (node.data.type) {
           case "llmTask":
-            result = await processLLMNode(node, inputData);
+            result = await processLLMNode(node, nodeOutputs, nodeLabelToId);
             break;
           case "dataOutput":
-            result = await processDataOutputNode(node, inputData);
+            result = await processDataOutputNode(
+              node,
+              nodeOutputs,
+              nodeLabelToId
+            );
             break;
           case "webScraping":
-            result = await processWebScrapingNode(node, inputData);
+            result = await processWebScrapingNode(
+              node,
+              nodeOutputs,
+              nodeLabelToId
+            );
             break;
           case "embeddingGenerator":
-            result = await processEmbeddingNode(node, inputData);
+            result = await processEmbeddingNode(
+              node,
+              nodeOutputs,
+              nodeLabelToId
+            );
             break;
           case "similaritySearch":
-            result = await processSimilaritySearchNode(node, inputData);
+            result = await processSimilaritySearchNode(
+              node,
+              nodeOutputs,
+              nodeLabelToId
+            );
             break;
           case "structuredOutput":
-            result = await processStructuredOutputNode(node, inputData);
+            result = await processStructuredOutputNode(
+              node,
+              nodeOutputs,
+              nodeLabelToId
+            );
             break;
           default:
             result = { output: `Processed by ${node.data.type} node` };
         }
 
         get().updateNodeStatus(node.id, "success", result);
+
+        // Store the node's output for future variable substitution
+        nodeOutputs.set(node.id, {
+          nodeId: node.id,
+          output: result.output,
+          data: result,
+          status: "success",
+        });
       }
     } catch (error) {
       console.error("Workflow execution failed:", error);
@@ -390,15 +451,23 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 }));
 
 // Node processing functions
-const processLLMNode = async (node: WorkflowNode, inputData: string) => {
+const processLLMNode = async (
+  node: WorkflowNode,
+  nodeOutputs: Map<string, NodeOutput>,
+  nodeLabelToId?: Map<string, string>
+) => {
   const config = node.data.config;
   const prompt = config.prompt || "Process the following input: {{input}}";
   const model = config.model || "gpt-3.5-turbo";
   const temperature = config.temperature || 0.7;
   const maxTokens = config.maxTokens || 1000;
 
-  // Replace {{input}} placeholder with actual input data
-  const processedPrompt = prompt.replace(/\{\{input\}\}/g, inputData);
+  // Apply variable substitution to the prompt
+  const processedPrompt = substituteVariables(
+    prompt,
+    nodeOutputs,
+    nodeLabelToId
+  );
 
   try {
     // Call OpenAI API
@@ -437,10 +506,17 @@ const processLLMNode = async (node: WorkflowNode, inputData: string) => {
   }
 };
 
-const processDataOutputNode = async (node: WorkflowNode, inputData: string) => {
+const processDataOutputNode = async (
+  node: WorkflowNode,
+  nodeOutputs: Map<string, NodeOutput>,
+  nodeLabelToId?: Map<string, string>
+) => {
   const config = node.data.config;
   const format = config.format || "text";
   const filename = config.filename || "output.txt";
+
+  // Get the most recent input data from the node outputs
+  const inputData = Array.from(nodeOutputs.values()).pop()?.output || "";
 
   let output;
   switch (format) {
@@ -463,10 +539,17 @@ const processDataOutputNode = async (node: WorkflowNode, inputData: string) => {
 
 const processWebScrapingNode = async (
   node: WorkflowNode,
-  inputData: string
+  nodeOutputs: Map<string, NodeOutput>,
+  nodeLabelToId?: Map<string, string>
 ) => {
   const config = node.data.config;
-  const url = config.url || inputData;
+
+  // Apply variable substitution to the URL
+  const urlTemplate = config.url || "";
+  const url =
+    substituteVariables(urlTemplate, nodeOutputs, nodeLabelToId) ||
+    Array.from(nodeOutputs.values()).pop()?.output ||
+    "";
 
   // Prepare Firecrawl configuration
   const firecrawlConfig: FirecrawlConfig = {
@@ -526,25 +609,36 @@ const processWebScrapingNode = async (
   }
 };
 
-const processEmbeddingNode = async (node: WorkflowNode, inputData: string) => {
+const processEmbeddingNode = async (
+  node: WorkflowNode,
+  nodeOutputs: Map<string, NodeOutput>,
+  nodeLabelToId?: Map<string, string>
+) => {
   const config = node.data.config;
   const model = config.model || "text-embedding-ada-002";
   const dimensions = config.dimensions || 1536;
 
+  // Get the most recent input data from the node outputs
+  const inputData = Array.from(nodeOutputs.values()).pop()?.output || "";
+
   // In a real app, this would generate actual embeddings
   const mockEmbedding = Array.from({ length: dimensions }, () => Math.random());
 
-  return { output: mockEmbedding, model, dimensions };
+  return { output: mockEmbedding, model, dimensions, inputData };
 };
 
 const processSimilaritySearchNode = async (
   node: WorkflowNode,
-  inputData: string
+  nodeOutputs: Map<string, NodeOutput>,
+  nodeLabelToId?: Map<string, string>
 ) => {
   const config = node.data.config;
   const vectorStore = config.vectorStore || "pinecone";
   const topK = config.topK || 5;
   const threshold = config.threshold || 0.8;
+
+  // Get the most recent input data from the node outputs
+  const inputData = Array.from(nodeOutputs.values()).pop()?.output || "";
 
   // In a real app, this would perform actual similarity search
   const mockResults = Array.from({ length: topK }, (_, i) => ({
@@ -558,11 +652,15 @@ const processSimilaritySearchNode = async (
 
 const processStructuredOutputNode = async (
   node: WorkflowNode,
-  inputData: string
+  nodeOutputs: Map<string, NodeOutput>,
+  nodeLabelToId?: Map<string, string>
 ) => {
   const config = node.data.config;
   const schema = config.schema || '{"type": "object"}';
   const model = config.model || "gpt-3.5-turbo";
+
+  // Get the most recent input data from the node outputs
+  const inputData = Array.from(nodeOutputs.values()).pop()?.output || "";
 
   // In a real app, this would use an LLM to structure the data according to the schema
   const mockStructuredOutput = {
