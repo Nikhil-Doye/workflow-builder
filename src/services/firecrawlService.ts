@@ -111,10 +111,6 @@ export const scrapeWithFirecrawl = async (
     // Perform the scrape - SDK returns data directly
     console.log("Firecrawl API Call - URL:", config.url);
     console.log("Firecrawl API Call - Options:", scrapeOptions);
-    console.log(
-      "Firecrawl API Call - API Key:",
-      apiKey.substring(0, 10) + "..."
-    );
 
     try {
       // First attempt with provided options
