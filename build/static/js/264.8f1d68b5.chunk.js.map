@@ -1,1 +1,0 @@
-{"version":3,"file":"static/js/264.8f1d68b5.chunk.js","mappings":"qJAGA,SAAeA,E,OAAAA,I","sources":["../node_modules/@mendable/firecrawl-js/dist/package-G6W4FIEC.js"],"sourcesContent":["import {\n  require_package\n} from \"./chunk-GWA53VW4.js\";\nexport default require_package();\n"],"names":["require_package"],"sourceRoot":""}
