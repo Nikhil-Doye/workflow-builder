@@ -11,7 +11,6 @@ import {
   Activity,
   TrendingUp,
   AlertTriangle,
-  Info,
   Copy,
   Download,
   Eye,
@@ -83,21 +82,6 @@ export const ExecutionPanel: React.FC = () => {
         return <ArrowRight className="w-4 h-4" />;
       default:
         return <Zap className="w-4 h-4" />;
-    }
-  };
-
-  const getNodeTypeColor = (type: string) => {
-    switch (type) {
-      case "dataInput":
-        return "text-blue-600";
-      case "webScraping":
-        return "text-green-600";
-      case "llmTask":
-        return "text-purple-600";
-      case "dataOutput":
-        return "text-orange-600";
-      default:
-        return "text-gray-600";
     }
   };
 

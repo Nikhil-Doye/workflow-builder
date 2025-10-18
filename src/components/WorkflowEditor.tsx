@@ -17,6 +17,7 @@ import "reactflow/dist/style.css";
 import { useWorkflowStore } from "../store/workflowStore";
 import { NodeConfiguration } from "./NodeConfiguration";
 import { WorkflowToolbar } from "./WorkflowToolbar";
+import { CopilotPanel } from "./CopilotPanel";
 import {
   WebScrapingNode,
   LLMNode,
@@ -29,12 +30,8 @@ import {
 import { NodeData } from "../types";
 import {
   Search,
-  Filter,
   Grid,
   List,
-  Settings,
-  HelpCircle,
-  Zap,
   Brain,
   Globe,
   ArrowRight,
@@ -43,6 +40,7 @@ import {
   Search as SearchIcon,
   X,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 
 const nodeTypes: NodeTypes = {
@@ -82,6 +80,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
   }, [currentWorkflow, setNodes, setEdges]);
   const [showConfig, setShowConfig] = useState(false);
   const [showNodePalette, setShowNodePalette] = useState(true);
+  const [showCopilot, setShowCopilot] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -465,6 +464,14 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
               </span>
             </button>
 
+            <button
+              onClick={() => setShowCopilot(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-700 rounded-lg hover:from-purple-100 hover:to-indigo-100 transition-colors border border-purple-200"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="font-medium">AI Copilot</span>
+            </button>
+
             {selectedNodeId && (
               <button
                 onClick={handleDeleteSelected}
@@ -558,6 +565,12 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
           onClose={() => setShowConfig(false)}
         />
       )}
+
+      {/* Copilot Panel */}
+      <CopilotPanel
+        isOpen={showCopilot}
+        onClose={() => setShowCopilot(false)}
+      />
     </div>
   );
 };

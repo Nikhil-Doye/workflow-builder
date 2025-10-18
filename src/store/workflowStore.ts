@@ -5,6 +5,8 @@ import {
   WorkflowEdge,
   NodeData,
   NodeStatus,
+  ValidationResult,
+  WorkflowStructure,
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
 import { callOpenAI, OpenAIConfig } from "../services/openaiService";
@@ -13,6 +15,7 @@ import {
   FirecrawlConfig,
 } from "../services/firecrawlService";
 import { substituteVariables, NodeOutput } from "../utils/variableSubstitution";
+import { copilotService } from "../services/copilotService";
 
 // localStorage key for workflows
 const WORKFLOWS_STORAGE_KEY = "agent-workflow-builder-workflows";
@@ -100,6 +103,12 @@ interface WorkflowStore {
     error?: string
   ) => void;
   clearExecutionResults: () => void;
+
+  // Copilot methods
+  generateWorkflowFromDescription: (description: string) => Promise<void>;
+  applyCopilotSuggestions: (suggestions: any[]) => void;
+  validateGeneratedWorkflow: () => ValidationResult | null;
+  getCopilotSuggestions: (context?: string) => Promise<string[]>;
 }
 
 const createEmptyWorkflow = (name: string): Workflow => ({
@@ -469,6 +478,155 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
   clearExecutionResults: () => {
     set({ executionResults: {}, isExecuting: false });
+  },
+
+  // Copilot methods
+  generateWorkflowFromDescription: async (description: string) => {
+    try {
+      const parsedIntent = await copilotService.parseNaturalLanguage(
+        description
+      );
+      const workflowStructure = parsedIntent.workflowStructure;
+
+      if (!workflowStructure) {
+        throw new Error("Failed to generate workflow structure");
+      }
+
+      // Create a new workflow with the generated structure
+      const newWorkflow = createEmptyWorkflow(parsedIntent.intent);
+
+      // Convert WorkflowStructure to Workflow format
+      const nodes: WorkflowNode[] = workflowStructure.nodes.map(
+        (node, index) => ({
+          id: `node-${index}`,
+          type: node.type,
+          position: node.position || { x: 100 + index * 200, y: 100 },
+          data: {
+            id: `node-${index}`,
+            type: node.type as any,
+            label: node.label,
+            status: "idle" as const,
+            config: node.config,
+            inputs: [],
+            outputs: [],
+          },
+        })
+      );
+
+      const edges: WorkflowEdge[] = workflowStructure.edges.map(
+        (edge, index) => ({
+          id: `edge-${index}`,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle,
+          targetHandle: edge.targetHandle,
+        })
+      );
+
+      const generatedWorkflow: Workflow = {
+        ...newWorkflow,
+        name: `Generated: ${parsedIntent.intent}`,
+        nodes,
+        edges,
+      };
+
+      // Add to workflows and set as current
+      const newWorkflows = [...get().workflows, generatedWorkflow];
+      set({
+        workflows: newWorkflows,
+        currentWorkflow: generatedWorkflow,
+      });
+
+      // Persist to localStorage
+      saveWorkflowsToStorage(newWorkflows);
+    } catch (error) {
+      console.error("Error generating workflow from description:", error);
+      throw error;
+    }
+  },
+
+  applyCopilotSuggestions: (suggestions: any[]) => {
+    const { currentWorkflow } = get();
+    if (!currentWorkflow) return;
+
+    // Apply suggestions to current workflow
+    // This is a simplified implementation - in practice, you'd have more sophisticated suggestion application
+    suggestions.forEach((suggestion) => {
+      if (suggestion.type === "node" && suggestion.nodeId) {
+        // Apply node-level suggestions
+        const node = currentWorkflow.nodes.find(
+          (n) => n.id === suggestion.nodeId
+        );
+        if (node) {
+          // Apply suggestion to node configuration
+          console.log("Applying suggestion to node:", suggestion);
+        }
+      }
+    });
+  },
+
+  validateGeneratedWorkflow: (): ValidationResult | null => {
+    const { currentWorkflow } = get();
+    if (!currentWorkflow) return null;
+
+    // Convert current workflow to WorkflowStructure format for validation
+    const workflowStructure: WorkflowStructure = {
+      nodes: currentWorkflow.nodes.map((node) => ({
+        type: node.type,
+        label: node.data.label,
+        config: node.data.config,
+        position: node.position,
+      })),
+      edges: currentWorkflow.edges.map((edge) => ({
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
+      })),
+      topology: {
+        type: "linear",
+        description: "Sequential processing",
+        parallelExecution: false,
+      },
+      complexity: "medium",
+    };
+
+    return copilotService.validateWorkflow(workflowStructure, "");
+  },
+
+  getCopilotSuggestions: async (context?: string): Promise<string[]> => {
+    const { currentWorkflow } = get();
+
+    if (!currentWorkflow) {
+      return ["Start by creating a new workflow"];
+    }
+
+    // Convert current workflow to WorkflowStructure format
+    const workflowStructure: WorkflowStructure = {
+      nodes: currentWorkflow.nodes.map((node) => ({
+        type: node.type,
+        label: node.data.label,
+        config: node.data.config,
+        position: node.position,
+      })),
+      edges: currentWorkflow.edges.map((edge) => ({
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
+      })),
+      topology: {
+        type: "linear",
+        description: "Sequential processing",
+        parallelExecution: false,
+      },
+      complexity: "medium",
+    };
+
+    return await copilotService.generateContextualSuggestions(
+      workflowStructure,
+      context || ""
+    );
   },
 }));
 

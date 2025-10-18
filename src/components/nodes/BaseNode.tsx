@@ -6,15 +6,12 @@ import {
   FileText,
   Brain,
   Search,
-  Database,
   ArrowDownToLine,
   ArrowUpFromLine,
   Loader2,
   CheckCircle,
   XCircle,
-  Zap,
   AlertCircle,
-  Clock,
 } from "lucide-react";
 import { clsx } from "clsx";
 

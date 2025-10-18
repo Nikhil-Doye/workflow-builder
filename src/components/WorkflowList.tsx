@@ -15,11 +15,6 @@ import {
   Globe,
   ArrowRight,
   Clock,
-  MoreVertical,
-  Copy,
-  Share2,
-  Star,
-  TrendingUp,
   HelpCircle,
 } from "lucide-react";
 

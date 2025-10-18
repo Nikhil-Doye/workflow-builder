@@ -156,7 +156,7 @@ const nodeTypeConfigs = {
         key: "dataType",
         label: "Data Type",
         type: "select",
-        options: ["text", "json", "csv", "url"],
+        options: ["text", "json", "csv", "url", "pdf"],
       },
       {
         key: "defaultValue",
