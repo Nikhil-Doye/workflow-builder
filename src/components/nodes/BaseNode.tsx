@@ -1,6 +1,6 @@
 import React from "react";
 import { Handle, Position, NodeProps } from "reactflow";
-import { NodeData } from "../../types";
+import { NodeData, NodeType } from "../../types";
 import {
   Globe,
   FileText,
@@ -12,10 +12,14 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Database,
+  Plus,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { clsx } from "clsx";
 
-const nodeIcons = {
+const nodeIcons: Record<NodeType, React.ComponentType<any>> = {
   webScraping: Globe,
   structuredOutput: FileText,
   embeddingGenerator: Brain,
@@ -23,9 +27,16 @@ const nodeIcons = {
   llmTask: Brain,
   dataInput: ArrowUpFromLine,
   dataOutput: ArrowDownToLine,
+  databaseQuery: Database,
+  databaseInsert: Plus,
+  databaseUpdate: Edit,
+  databaseDelete: Trash2,
 };
 
-const nodeColors = {
+const nodeColors: Record<
+  NodeType,
+  { bg: string; border: string; icon: string; accent: string }
+> = {
   webScraping: {
     bg: "bg-green-50",
     border: "border-green-200",
@@ -67,6 +78,30 @@ const nodeColors = {
     border: "border-blue-200",
     icon: "text-blue-600",
     accent: "bg-blue-500",
+  },
+  databaseQuery: {
+    bg: "bg-cyan-50",
+    border: "border-cyan-200",
+    icon: "text-cyan-600",
+    accent: "bg-cyan-500",
+  },
+  databaseInsert: {
+    bg: "bg-emerald-50",
+    border: "border-emerald-200",
+    icon: "text-emerald-600",
+    accent: "bg-emerald-500",
+  },
+  databaseUpdate: {
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    icon: "text-amber-600",
+    accent: "bg-amber-500",
+  },
+  databaseDelete: {
+    bg: "bg-red-50",
+    border: "border-red-200",
+    icon: "text-red-600",
+    accent: "bg-red-500",
   },
 };
 

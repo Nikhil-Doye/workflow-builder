@@ -16,7 +16,12 @@ export type NodeType =
   | "similaritySearch"
   | "llmTask"
   | "dataInput"
-  | "dataOutput";
+  | "dataOutput"
+  // Database connectors
+  | "databaseQuery"
+  | "databaseInsert"
+  | "databaseUpdate"
+  | "databaseDelete";
 
 export type NodeStatus = "idle" | "running" | "success" | "error";
 

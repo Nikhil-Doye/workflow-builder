@@ -1028,18 +1028,43 @@ const processStructuredOutputNode = async (
   // Get the most recent input data from the node outputs
   const inputData = Array.from(nodeOutputs.values()).pop()?.output || "";
 
-  // In a real app, this would use an LLM to structure the data according to the schema
-  const mockStructuredOutput = {
-    input: inputData,
-    structured: {
-      text: inputData,
-      length: inputData.length,
-      timestamp: new Date().toISOString(),
-    },
-    schema: JSON.parse(schema),
-  };
+  // Use LLM to structure the data according to the schema
+  try {
+    const prompt = `Structure the following data according to the provided JSON schema. Return only valid JSON that matches the schema exactly.
 
-  return { output: mockStructuredOutput, model, schema };
+Data: ${inputData}
+
+Schema: ${schema}
+
+Return the structured data as JSON:`;
+
+    const response = await callOpenAI(prompt, {
+      model: model,
+      temperature: 0.1,
+      maxTokens: 1000,
+    });
+
+    const structuredOutput = {
+      input: inputData,
+      structured: JSON.parse(response.content),
+      schema: JSON.parse(schema),
+    };
+
+    return { output: structuredOutput, model, schema };
+  } catch (error) {
+    // Fallback to basic structure if LLM fails
+    const fallbackStructuredOutput = {
+      input: inputData,
+      structured: {
+        text: inputData,
+        length: inputData.length,
+        timestamp: new Date().toISOString(),
+      },
+      schema: JSON.parse(schema),
+    };
+
+    return { output: fallbackStructuredOutput, model, schema };
+  }
 };
 
 // Helper functions for prompt optimization

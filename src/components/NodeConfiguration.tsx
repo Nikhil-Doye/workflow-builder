@@ -203,6 +203,105 @@ const nodeTypeConfigs = {
       },
     ],
   },
+  databaseQuery: {
+    title: "Database Query Configuration",
+    fields: [
+      {
+        key: "connector",
+        label: "Database Connector",
+        type: "select",
+        options: ["postgres", "mysql", "mongodb"],
+      },
+      {
+        key: "query",
+        label: "SQL Query",
+        type: "textarea",
+        placeholder: "SELECT * FROM users WHERE id = ?",
+      },
+      {
+        key: "parameters",
+        label: "Query Parameters (JSON)",
+        type: "textarea",
+        placeholder: '["param1", "param2"]',
+      },
+    ],
+  },
+  databaseInsert: {
+    title: "Database Insert Configuration",
+    fields: [
+      {
+        key: "connector",
+        label: "Database Connector",
+        type: "select",
+        options: ["postgres", "mysql", "mongodb"],
+      },
+      {
+        key: "table",
+        label: "Table/Collection Name",
+        type: "text",
+        placeholder: "users",
+      },
+      {
+        key: "data",
+        label: "Data to Insert (JSON)",
+        type: "textarea",
+        placeholder: '{"name": "John", "email": "john@example.com"}',
+      },
+    ],
+  },
+  databaseUpdate: {
+    title: "Database Update Configuration",
+    fields: [
+      {
+        key: "connector",
+        label: "Database Connector",
+        type: "select",
+        options: ["postgres", "mysql", "mongodb"],
+      },
+      {
+        key: "table",
+        label: "Table/Collection Name",
+        type: "text",
+        placeholder: "users",
+      },
+      {
+        key: "where",
+        label: "WHERE Condition",
+        type: "text",
+        placeholder: "id = ?",
+      },
+      {
+        key: "data",
+        label: "Data to Update (JSON)",
+        type: "textarea",
+        placeholder:
+          '{"name": "John Updated", "email": "john.updated@example.com"}',
+      },
+    ],
+  },
+  databaseDelete: {
+    title: "Database Delete Configuration",
+    fields: [
+      {
+        key: "connector",
+        label: "Database Connector",
+        type: "select",
+        options: ["postgres", "mysql", "mongodb"],
+      },
+      {
+        key: "table",
+        label: "Table/Collection Name",
+        type: "text",
+        placeholder: "users",
+      },
+      {
+        key: "where",
+        label: "WHERE Condition",
+        type: "text",
+        placeholder: "id = ?",
+      },
+    ],
+  },
 };
 
 export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
@@ -424,7 +523,7 @@ Return only the optimized prompt:`,
         return (
           <Select
             value={value}
-            onValueChange={(newValue) =>
+            onValueChange={(newValue: string) =>
               handleConfigChange(field.key, newValue)
             }
           >

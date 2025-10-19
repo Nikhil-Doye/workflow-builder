@@ -26,6 +26,11 @@ import {
   StructuredOutputNode,
   DataInputNode,
   DataOutputNode,
+  // Database nodes
+  DatabaseQueryNode,
+  DatabaseInsertNode,
+  DatabaseUpdateNode,
+  DatabaseDeleteNode,
 } from "./nodes";
 import { NodeData } from "../types";
 import {
@@ -41,6 +46,10 @@ import {
   X,
   Trash2,
   Sparkles,
+  // Database icons
+  Plus as PlusIcon,
+  Edit,
+  Trash2 as TrashIcon,
 } from "lucide-react";
 
 const nodeTypes: NodeTypes = {
@@ -51,6 +60,11 @@ const nodeTypes: NodeTypes = {
   structuredOutput: StructuredOutputNode,
   dataInput: DataInputNode,
   dataOutput: DataOutputNode,
+  // Database nodes
+  databaseQuery: DatabaseQueryNode,
+  databaseInsert: DatabaseInsertNode,
+  databaseUpdate: DatabaseUpdateNode,
+  databaseDelete: DatabaseDeleteNode,
 };
 
 interface WorkflowEditorProps {
@@ -265,6 +279,39 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
       color: "blue",
       category: "Output",
     },
+    // Database nodes
+    {
+      type: "databaseQuery",
+      label: "Database Query",
+      icon: Database,
+      description: "Query database with SQL",
+      color: "cyan",
+      category: "Database",
+    },
+    {
+      type: "databaseInsert",
+      label: "Database Insert",
+      icon: PlusIcon,
+      description: "Insert data into database",
+      color: "emerald",
+      category: "Database",
+    },
+    {
+      type: "databaseUpdate",
+      label: "Database Update",
+      icon: Edit,
+      description: "Update existing records",
+      color: "amber",
+      category: "Database",
+    },
+    {
+      type: "databaseDelete",
+      label: "Database Delete",
+      icon: TrashIcon,
+      description: "Delete records from database",
+      color: "red",
+      category: "Database",
+    },
   ];
 
   const categories = [
@@ -280,6 +327,10 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     {
       name: "Data",
       count: nodeTypesList.filter((n) => n.category === "Data").length,
+    },
+    {
+      name: "Database",
+      count: nodeTypesList.filter((n) => n.category === "Database").length,
     },
     {
       name: "Output",
@@ -321,6 +372,12 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
       orange:
         "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100",
       pink: "bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-100",
+      // Database colors
+      cyan: "bg-cyan-50 border-cyan-200 text-cyan-700 hover:bg-cyan-100",
+      emerald:
+        "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100",
+      amber: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100",
+      red: "bg-red-50 border-red-200 text-red-700 hover:bg-red-100",
     };
     return (
       colorMap[color as keyof typeof colorMap] ||
