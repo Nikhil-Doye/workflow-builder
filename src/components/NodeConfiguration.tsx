@@ -4,6 +4,18 @@ import { useWorkflowStore } from "../store/workflowStore";
 import { X, Settings, Sparkles } from "lucide-react";
 import { promptOptimizer } from "../services/promptOptimizer";
 import { callOpenAI } from "../services/openaiService";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
 
 interface NodeConfigurationProps {
   nodeId: string;
@@ -355,25 +367,23 @@ Return only the optimized prompt:`,
       case "textarea":
         return (
           <div className="space-y-2">
-            <textarea
+            <Textarea
               value={value}
               onChange={(e) => handleConfigChange(field.key, e.target.value)}
               placeholder={field.placeholder}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               rows={3}
             />
             {data.type === "llmTask" && field.key === "prompt" && (
               <div className="flex items-center space-x-2">
-                <button
+                <Button
                   onClick={handleOptimizePrompt}
                   disabled={isOptimizing || !currentData.config.prompt}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-medium rounded-md hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
+                  size="sm"
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  <span>
-                    {isOptimizing ? "Optimizing..." : "Optimize Prompt"}
-                  </span>
-                </button>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  {isOptimizing ? "Optimizing..." : "Optimize Prompt"}
+                </Button>
               </div>
             )}
           </div>
@@ -412,18 +422,23 @@ Return only the optimized prompt:`,
           );
         }
         return (
-          <select
+          <Select
             value={value}
-            onChange={(e) => handleConfigChange(field.key, e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            onValueChange={(newValue) =>
+              handleConfigChange(field.key, newValue)
+            }
           >
-            <option value="">Select {field.label}</option>
-            {field.options.map((option: string) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder={`Select ${field.label}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options.map((option: string) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         );
       case "checkbox":
         return (
@@ -439,7 +454,7 @@ Return only the optimized prompt:`,
         );
       case "number":
         return (
-          <input
+          <Input
             type="number"
             value={value}
             onChange={(e) =>
@@ -449,17 +464,15 @@ Return only the optimized prompt:`,
             min={field.min}
             max={field.max}
             step={field.step}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
         );
       default:
         return (
-          <input
+          <Input
             type="text"
             value={value}
             onChange={(e) => handleConfigChange(field.key, e.target.value)}
             placeholder={field.placeholder}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
         );
     }
@@ -467,32 +480,33 @@ Return only the optimized prompt:`,
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <Card className="w-full max-w-md max-h-[80vh] overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div className="flex items-center space-x-2">
             <Settings className="w-5 h-5 text-gray-600" />
-            <h3 className="text-lg font-semibold text-gray-900">
+            <CardTitle className="text-lg font-semibold text-gray-900">
               {config.title}
-            </h3>
+            </CardTitle>
           </div>
-          <button
+          <Button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
           >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
+            <X className="w-4 h-4" />
+          </Button>
+        </CardHeader>
 
-        <div className="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+        <CardContent className="space-y-4 overflow-y-auto max-h-[60vh]">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Node Label
             </label>
-            <input
+            <Input
               type="text"
               value={currentData.label}
               onChange={(e) => handleLabelChange(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
 
@@ -507,57 +521,61 @@ Return only the optimized prompt:`,
 
           {/* Optimization Result Display */}
           {data.type === "llmTask" && optimizationResult && (
-            <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
-              <div className="flex items-center space-x-2 mb-3">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                <h4 className="text-sm font-semibold text-purple-800">
-                  Optimized Prompt Preview
-                </h4>
-                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                  Preview
-                </span>
-              </div>
-              <div className="bg-white p-4 rounded-md border border-purple-100 shadow-sm">
-                <div className="mb-2 text-xs text-gray-500 font-medium">
-                  Optimized Prompt:
+            <Card className="mt-4 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+              <CardHeader className="pb-3">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  <CardTitle className="text-sm font-semibold text-purple-800">
+                    Optimized Prompt Preview
+                  </CardTitle>
+                  <Badge variant="info" className="text-xs">
+                    Preview
+                  </Badge>
                 </div>
-                <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono leading-relaxed bg-gray-50 p-3 rounded border">
-                  {optimizationResult}
-                </pre>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <div className="text-xs text-purple-600">
-                  Review the optimized prompt above and click "Apply" to replace
-                  your current prompt.
+              </CardHeader>
+              <CardContent>
+                <div className="bg-white p-4 rounded-md border border-purple-100 shadow-sm">
+                  <div className="mb-2 text-xs text-gray-500 font-medium">
+                    Optimized Prompt:
+                  </div>
+                  <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono leading-relaxed bg-gray-50 p-3 rounded border">
+                    {optimizationResult}
+                  </pre>
                 </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setOptimizationResult("")}
-                    className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={applyOptimizedPrompt}
-                    className="px-3 py-1 bg-green-500 text-white text-xs font-medium rounded hover:bg-green-600 transition-colors"
-                  >
-                    Apply Optimized Prompt
-                  </button>
+                <div className="mt-3 flex items-center justify-between">
+                  <div className="text-xs text-purple-600">
+                    Review the optimized prompt above and click "Apply" to
+                    replace your current prompt.
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      onClick={() => setOptimizationResult("")}
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={applyOptimizedPrompt}
+                      size="sm"
+                      className="bg-green-500 hover:bg-green-600 text-xs"
+                    >
+                      Apply Optimized Prompt
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
-        </div>
+        </CardContent>
 
         <div className="flex justify-end space-x-2 p-4 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-          >
+          <Button onClick={onClose} variant="secondary">
             Close
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };
