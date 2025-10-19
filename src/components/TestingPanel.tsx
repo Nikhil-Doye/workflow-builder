@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useWorkflowStore } from "../store/workflowStore";
 import { Play, FileText, Download, RotateCcw } from "lucide-react";
+import { Button } from "./ui/button";
 
 export const TestingPanel: React.FC = () => {
   const { currentWorkflow, executeWorkflow, isExecuting, executionResults } =
@@ -104,34 +105,35 @@ export const TestingPanel: React.FC = () => {
             </label>
             <div className="space-y-2">
               {sampleInputs.map((sample, index) => (
-                <button
+                <Button
                   key={index}
                   onClick={() => handleLoadSample(sample)}
-                  className="w-full text-left p-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
+                  variant="ghost"
+                  className="w-full justify-start p-2 text-sm"
                 >
                   {sample.name}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
 
           <div className="flex space-x-2">
-            <button
+            <Button
               onClick={handleTestExecution}
               disabled={isExecuting}
-              className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
-              <Play className="w-4 h-4" />
-              <span>Run Test</span>
-            </button>
+              <Play className="w-4 h-4 mr-2" />
+              Run Test
+            </Button>
 
-            <button
+            <Button
               onClick={handleClearResults}
-              className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+              variant="secondary"
               title="Clear results"
             >
               <RotateCcw className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -143,13 +145,15 @@ export const TestingPanel: React.FC = () => {
               <h4 className="text-sm font-medium text-gray-700">
                 Test Results
               </h4>
-              <button
+              <Button
                 onClick={handleExportResults}
-                className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                variant="secondary"
+                size="sm"
+                className="text-xs"
               >
-                <Download className="w-3 h-3" />
-                <span>Export</span>
-              </button>
+                <Download className="w-3 h-3 mr-1" />
+                Export
+              </Button>
             </div>
 
             <div className="space-y-3">

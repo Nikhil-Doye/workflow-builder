@@ -15,6 +15,7 @@ import {
   loadWorkflowFromFile,
 } from "../utils/workflowSerialization";
 import { ApiKeysSettings } from "./ApiKeysSettings";
+import { Button } from "./ui/button";
 
 export const WorkflowToolbar: React.FC = () => {
   const {
@@ -88,79 +89,77 @@ export const WorkflowToolbar: React.FC = () => {
       </div>
 
       <div className="flex items-center space-x-2">
-        <button
+        <Button
           onClick={handleSave}
-          className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${
-            showSaveSuccess
-              ? "bg-green-600 text-white hover:bg-green-700"
-              : "bg-gray-600 text-white hover:bg-gray-700"
-          }`}
+          variant={showSaveSuccess ? "default" : "default"}
+          className={showSaveSuccess ? "bg-green-600 hover:bg-green-700" : ""}
           title="Save workflow"
         >
           {showSaveSuccess ? (
-            <Check className="w-4 h-4" />
+            <Check className="w-4 h-4 mr-2" />
           ) : (
-            <Save className="w-4 h-4" />
+            <Save className="w-4 h-4 mr-2" />
           )}
-          <span>{showSaveSuccess ? "Saved!" : "Save"}</span>
-        </button>
+          {showSaveSuccess ? "Saved!" : "Save"}
+        </Button>
 
-        <button
+        <Button
           onClick={handleExport}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          variant="default"
           title="Export workflow"
         >
-          <Download className="w-4 h-4" />
-          <span>Export</span>
-        </button>
+          <Download className="w-4 h-4 mr-2" />
+          Export
+        </Button>
 
-        <button
+        <Button
           onClick={handleImport}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          variant="default"
           title="Import workflow"
         >
-          <Upload className="w-4 h-4" />
-          <span>Import</span>
-        </button>
+          <Upload className="w-4 h-4 mr-2" />
+          Import
+        </Button>
 
-        <button
+        <Button
           onClick={() => setShowApiKeysSettings(true)}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          variant="default"
           title="Configure API Keys"
         >
-          <Key className="w-4 h-4" />
-          <span>API Keys</span>
-        </button>
+          <Key className="w-4 h-4 mr-2" />
+          API Keys
+        </Button>
 
         <div className="w-px h-6 bg-gray-300" />
 
-        <button
+        <Button
           onClick={handleExecute}
           disabled={isExecuting}
-          className="flex items-center space-x-2 px-3 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          variant="default"
+          className="bg-blue-600 hover:bg-blue-700"
           title={isExecuting ? "Stop execution" : "Execute workflow"}
         >
           {isExecuting ? (
             <>
-              <Square className="w-4 h-4" />
-              <span>Stop</span>
+              <Square className="w-4 h-4 mr-2" />
+              Stop
             </>
           ) : (
             <>
-              <Play className="w-4 h-4" />
-              <span>Execute</span>
+              <Play className="w-4 h-4 mr-2" />
+              Execute
             </>
           )}
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={handleClear}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          variant="default"
           title="Reset workflow (clear all nodes)"
         >
-          <RotateCcw className="w-4 h-4" />
-          <span>Reset</span>
-        </button>
+          <RotateCcw className="w-4 h-4 mr-2" />
+          Reset
+        </Button>
       </div>
 
       <input
