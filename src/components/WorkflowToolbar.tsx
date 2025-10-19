@@ -7,14 +7,14 @@ import {
   Play,
   Square,
   RotateCcw,
-  Settings,
+  Key,
   Check,
 } from "lucide-react";
 import {
   downloadWorkflow,
   loadWorkflowFromFile,
 } from "../utils/workflowSerialization";
-import { OpenAIConfig } from "./OpenAIConfig";
+import { ApiKeysSettings } from "./ApiKeysSettings";
 
 export const WorkflowToolbar: React.FC = () => {
   const {
@@ -26,7 +26,7 @@ export const WorkflowToolbar: React.FC = () => {
   } = useWorkflowStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showOpenAIConfig, setShowOpenAIConfig] = useState(false);
+  const [showApiKeysSettings, setShowApiKeysSettings] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
   const handleSave = () => {
@@ -92,8 +92,8 @@ export const WorkflowToolbar: React.FC = () => {
           onClick={handleSave}
           className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${
             showSaveSuccess
-              ? "bg-green-100 text-green-700 hover:bg-green-200"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              ? "bg-green-600 text-white hover:bg-green-700"
+              : "bg-gray-600 text-white hover:bg-gray-700"
           }`}
           title="Save workflow"
         >
@@ -107,7 +107,7 @@ export const WorkflowToolbar: React.FC = () => {
 
         <button
           onClick={handleExport}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+          className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
           title="Export workflow"
         >
           <Download className="w-4 h-4" />
@@ -116,7 +116,7 @@ export const WorkflowToolbar: React.FC = () => {
 
         <button
           onClick={handleImport}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+          className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
           title="Import workflow"
         >
           <Upload className="w-4 h-4" />
@@ -124,12 +124,12 @@ export const WorkflowToolbar: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setShowOpenAIConfig(true)}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-          title="Configure OpenAI API"
+          onClick={() => setShowApiKeysSettings(true)}
+          className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          title="Configure API Keys"
         >
-          <Settings className="w-4 h-4" />
-          <span>AI Config</span>
+          <Key className="w-4 h-4" />
+          <span>API Keys</span>
         </button>
 
         <div className="w-px h-6 bg-gray-300" />
@@ -155,7 +155,7 @@ export const WorkflowToolbar: React.FC = () => {
 
         <button
           onClick={handleClear}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+          className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
           title="Reset workflow (clear all nodes)"
         >
           <RotateCcw className="w-4 h-4" />
@@ -171,9 +171,9 @@ export const WorkflowToolbar: React.FC = () => {
         className="hidden"
       />
 
-      {/* OpenAI Configuration Modal */}
-      {showOpenAIConfig && (
-        <OpenAIConfig onClose={() => setShowOpenAIConfig(false)} />
+      {/* API Keys Settings Modal */}
+      {showApiKeysSettings && (
+        <ApiKeysSettings onClose={() => setShowApiKeysSettings(false)} />
       )}
     </div>
   );

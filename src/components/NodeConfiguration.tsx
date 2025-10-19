@@ -121,7 +121,13 @@ const nodeTypeConfigs = {
         key: "vectorStore",
         label: "Vector Store",
         type: "select",
-        options: ["pinecone", "weaviate", "chroma"],
+        options: ["pinecone"],
+      },
+      {
+        key: "indexName",
+        label: "Index Name",
+        type: "text",
+        placeholder: "my-index",
       },
       { key: "topK", label: "Top K Results", type: "number", placeholder: "5" },
       {

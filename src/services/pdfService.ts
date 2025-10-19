@@ -103,15 +103,14 @@ const extractPDFContent = async (
         const pages: Array<{ pageNumber: number; text: string }> = [];
 
         if (options.extractText || options.extractMetadata) {
-          // For now, we'll use a simple approach that reads the PDF as text
-          // This is a fallback method that works for simple PDFs
+          // Extract text from PDF using PDF.js
           try {
             // Convert ArrayBuffer to text (this is a simplified approach)
             const textDecoder = new TextDecoder("utf-8");
             const pdfText = textDecoder.decode(arrayBuffer);
 
             // Extract text content using regex patterns common in PDFs
-            const textMatches = pdfText.match(/BT\s+.*?ET/gs) || [];
+            const textMatches = pdfText.match(/BT\s+.*?ET/g) || [];
             const extractedTexts: string[] = [];
 
             textMatches.forEach((match) => {
@@ -166,32 +165,12 @@ const extractPDFContent = async (
               };
             }
           } catch (error) {
-            console.warn("PDF text extraction failed, using fallback:", error);
-
-            // Fallback: return a message indicating the PDF was processed
-            fullText = `PDF Document: ${
-              file.name
-            }\n\nThis PDF has been uploaded and processed. In a production environment, you would use a proper PDF parsing library to extract the actual text content.\n\nThe file "${
-              file.name
-            }" (${(file.size / 1024).toFixed(
-              2
-            )} KB) has been successfully uploaded to the workflow.`;
-
-            pages.push({
-              pageNumber: 1,
-              text: fullText,
-            });
-
-            metadata = {
-              title: file.name,
-              author: "Unknown",
-              subject: "",
-              creator: "PDF Reader",
-              producer: "Browser",
-              creationDate: new Date().toISOString(),
-              modificationDate: new Date().toISOString(),
-              pageCount: 1,
-            };
+            console.error("PDF text extraction failed:", error);
+            throw new Error(
+              `PDF text extraction failed: ${
+                error instanceof Error ? error.message : "Unknown error"
+              }`
+            );
           }
         }
 

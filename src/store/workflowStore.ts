@@ -9,11 +9,16 @@ import {
   WorkflowStructure,
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
-import { callOpenAI, OpenAIConfig } from "../services/openaiService";
+import {
+  callOpenAI,
+  OpenAIConfig,
+  generateEmbedding,
+} from "../services/openaiService";
 import {
   scrapeWithFirecrawl,
   FirecrawlConfig,
 } from "../services/firecrawlService";
+import { searchSimilarVectors } from "../services/pineconeService";
 import { substituteVariables, NodeOutput } from "../utils/variableSubstitution";
 import { agentManager } from "../services/agents/AgentManager";
 
@@ -733,20 +738,11 @@ const processLLMNode = async (
     };
   } catch (error) {
     console.error("Error processing LLM node:", error);
-
-    // Fallback to mock response if API fails
-    const fallbackResponse = `Error calling OpenAI API: ${
-      error instanceof Error ? error.message : "Unknown error"
-    }. Please check your API key and try again.`;
-
-    return {
-      output: fallbackResponse,
-      prompt: processedPrompt,
-      model,
-      temperature,
-      maxTokens,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    throw new Error(
+      `LLM processing failed: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 };
 
@@ -944,17 +940,11 @@ const processWebScrapingNode = async (
     }
   } catch (error) {
     console.error("Error processing web scraping node:", error);
-
-    // Return fallback response if Firecrawl fails
-    const fallbackContent = `Error scraping ${url}: ${
-      error instanceof Error ? error.message : "Unknown error"
-    }. Please check your Firecrawl API key and try again.`;
-
-    return {
-      output: fallbackContent,
-      url,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    throw new Error(
+      `Web scraping failed: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 };
 
@@ -970,10 +960,19 @@ const processEmbeddingNode = async (
   // Get the most recent input data from the node outputs
   const inputData = Array.from(nodeOutputs.values()).pop()?.output || "";
 
-  // In a real app, this would generate actual embeddings
-  const mockEmbedding = Array.from({ length: dimensions }, () => Math.random());
+  if (!inputData) {
+    throw new Error("No input data provided for embedding generation");
+  }
 
-  return { output: mockEmbedding, model, dimensions, inputData };
+  const embedding = await generateEmbedding(inputData, model);
+
+  return {
+    output: embedding,
+    model,
+    dimensions,
+    inputData,
+    type: "embedding",
+  };
 };
 
 const processSimilaritySearchNode = async (
@@ -985,18 +984,36 @@ const processSimilaritySearchNode = async (
   const vectorStore = config.vectorStore || "pinecone";
   const topK = config.topK || 5;
   const threshold = config.threshold || 0.8;
+  const indexName = config.indexName || "default-index";
 
-  // Get the most recent input data from the node outputs
   const inputData = Array.from(nodeOutputs.values()).pop()?.output || "";
 
-  // In a real app, this would perform actual similarity search
-  const mockResults = Array.from({ length: topK }, (_, i) => ({
-    id: `result_${i + 1}`,
-    content: `Similar content ${i + 1} for: ${inputData}`,
-    similarity: threshold + Math.random() * (1 - threshold),
-  }));
+  if (!inputData) {
+    throw new Error("No input data provided for similarity search");
+  }
 
-  return { output: mockResults, vectorStore, topK, threshold };
+  if (vectorStore === "pinecone") {
+    const queryEmbedding = await generateEmbedding(inputData);
+    const results = await searchSimilarVectors(
+      queryEmbedding,
+      indexName,
+      topK,
+      threshold
+    );
+
+    return {
+      output: results,
+      vectorStore,
+      topK,
+      threshold,
+      indexName,
+      type: "pinecone_search",
+    };
+  } else {
+    throw new Error(
+      `Vector store '${vectorStore}' is not supported. Only Pinecone is currently supported.`
+    );
+  }
 };
 
 const processStructuredOutputNode = async (

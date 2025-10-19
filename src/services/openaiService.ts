@@ -78,19 +78,35 @@ export const callOpenAI = async (
     };
   } catch (error) {
     console.error("OpenAI API Error:", error);
-
-    // Return a fallback response if API fails
-    return {
-      content: `Error calling DeepSeek API: ${
+    throw new Error(
+      `OpenAI API call failed: ${
         error instanceof Error ? error.message : "Unknown error"
-      }. Please check your API key and try again.`,
-    };
+      }`
+    );
   }
 };
 
+export const generateEmbedding = async (
+  text: string,
+  model: string = "text-embedding-ada-002"
+): Promise<number[]> => {
+  const apiKey = getApiKey();
+  if (!apiKey || apiKey === "your_openai_api_key_here") {
+    throw new Error(
+      "OpenAI API key not configured. Please configure your API key in the settings."
+    );
+  }
+
+  openai.apiKey = apiKey;
+
+  const response = await openai.embeddings.create({
+    model,
+    input: text,
+  });
+
+  return response.data[0].embedding;
+};
+
 export const getAvailableModels = (): string[] => {
-  return [
-    "deepseek-chat",
-    "deepseek-reasoner"
-  ];
+  return ["deepseek-chat", "deepseek-reasoner"];
 };
