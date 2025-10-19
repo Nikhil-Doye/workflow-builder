@@ -539,39 +539,31 @@ function generateDefaultValue(entities: any): string {
 }
 
 /**
- * Generate AI prompt based on entities
+ * Generate AI prompt based on entities using the new prompt optimizer
  */
-function generateAIPrompt(entities: any): string {
-  const tasks = entities.aiTasks || [];
-  const dataTypes = entities.dataTypes || [];
+function generateAIPrompt(
+  entities: any,
+  userInput?: string,
+  nodeContext?: any
+): string {
+  // Import the prompt optimizer
+  const { promptOptimizer } = require("../services/promptOptimizer");
 
-  // Special handling for PDF files
-  if (dataTypes.includes("pdf")) {
-    if (tasks.includes("summarize")) {
-      return "Summarize the PDF document in 2-3 sentences: {{input.output}}";
-    }
-    if (tasks.includes("analyze")) {
-      return "Analyze the PDF content and provide insights: {{input.output}}";
-    }
-    if (tasks.includes("extract")) {
-      return "Extract key information from the PDF: {{input.output}}";
-    }
-    return "Process the PDF content: {{input.output}}";
-  }
+  // Create node context if not provided
+  const context = nodeContext || {
+    dataType: determineInputDataType(entities),
+    previousNodes: [],
+    intent: "AI_ANALYSIS",
+    availableData: new Map(),
+  };
 
-  if (tasks.includes("summarize")) {
-    return "Summarize the following content in 2-3 sentences: {{input.output}}";
-  }
-
-  if (tasks.includes("analyze")) {
-    return "Analyze the following content and provide insights: {{input.output}}";
-  }
-
-  if (tasks.includes("classify")) {
-    return "Classify the following content into categories: {{input.output}}";
-  }
-
-  return "Process the following content: {{input.output}}";
+  // Generate optimized prompt
+  return promptOptimizer.generateOptimizedPrompt(
+    userInput || "Process the input data",
+    entities,
+    context,
+    context.availableData
+  );
 }
 
 /**

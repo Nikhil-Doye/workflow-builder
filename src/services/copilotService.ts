@@ -275,14 +275,36 @@ Respond with JSON:
   }
 
   /**
-   * Generate workflow structure using LLM
+   * Generate workflow structure using LLM with optimized prompts
    */
   private async generateWorkflowStructureWithLLM(
     userInput: string,
     intent: IntentClassification,
     entities: EntityExtraction
   ): Promise<WorkflowStructure> {
-    const prompt = `
+    // Import the prompt optimizer
+    const { promptOptimizer } = require("./promptOptimizer");
+
+    // Create context for workflow generation
+    const workflowContext = {
+      dataType: this.determineWorkflowDataType(entities),
+      previousNodes: [],
+      intent: intent.intent,
+      domain: this.determineWorkflowDomain(userInput, entities),
+      workflowType: this.determineWorkflowType(intent, entities),
+      availableData: new Map(),
+    };
+
+    // Generate optimized prompt for workflow generation
+    const optimizedPrompt = promptOptimizer.generateOptimizedPrompt(
+      userInput,
+      entities,
+      workflowContext,
+      workflowContext.availableData
+    );
+
+    const prompt = `${optimizedPrompt}
+
 You are an AI workflow designer. Analyze the user's request and create a comprehensive workflow structure.
 
 User Request: "${userInput}"
@@ -300,10 +322,11 @@ Instructions:
 1. Understand the user's goal and break it down into logical steps
 2. Create a workflow that accomplishes their request
 3. Use appropriate node types for each step
-4. Configure nodes with realistic settings
+4. Configure nodes with realistic settings and optimized prompts
 5. Connect nodes logically with proper data flow
 6. Use variable substitution ({{nodeId.output}}) to pass data between nodes
 7. Make the workflow practical and executable
+8. For LLM nodes, use context-aware, domain-specific prompts
 
 For job application workflows, consider:
 - Resume analysis and skill extraction
@@ -627,6 +650,107 @@ Respond with valid JSON only:
       size: this.cache.size,
       hitRate: 0.8, // Placeholder - would track actual hit rate
     };
+  }
+
+  /**
+   * Determine workflow data type from entities
+   */
+  private determineWorkflowDataType(entities: EntityExtraction): string {
+    if (entities.urls?.length > 0) return "url";
+    if (entities.dataTypes?.includes("json")) return "json";
+    if (entities.dataTypes?.includes("csv")) return "csv";
+    if (entities.dataTypes?.includes("pdf")) return "pdf";
+    if (
+      entities.dataTypes?.includes("resume") ||
+      entities.dataTypes?.includes("cv")
+    )
+      return "text";
+    return "text";
+  }
+
+  /**
+   * Determine workflow domain from user input and entities
+   */
+  private determineWorkflowDomain(
+    userInput: string,
+    entities: EntityExtraction
+  ): string {
+    const input = userInput.toLowerCase();
+
+    if (
+      entities.dataTypes?.includes("resume") ||
+      entities.dataTypes?.includes("cv") ||
+      input.includes("resume") ||
+      input.includes("job") ||
+      input.includes("career")
+    ) {
+      return "jobApplication";
+    }
+
+    if (
+      entities.dataTypes?.includes("financial") ||
+      input.includes("financial") ||
+      input.includes("revenue") ||
+      input.includes("profit")
+    ) {
+      return "financial";
+    }
+
+    if (
+      entities.dataTypes?.includes("legal") ||
+      input.includes("legal") ||
+      input.includes("contract") ||
+      input.includes("agreement")
+    ) {
+      return "legal";
+    }
+
+    if (
+      entities.dataTypes?.includes("medical") ||
+      input.includes("medical") ||
+      input.includes("health") ||
+      input.includes("patient")
+    ) {
+      return "medical";
+    }
+
+    if (
+      entities.dataTypes?.includes("technical") ||
+      input.includes("technical") ||
+      input.includes("code") ||
+      input.includes("software")
+    ) {
+      return "technical";
+    }
+
+    if (
+      input.includes("content") ||
+      input.includes("marketing") ||
+      input.includes("seo")
+    ) {
+      return "contentAnalysis";
+    }
+
+    return "general";
+  }
+
+  /**
+   * Determine workflow type from intent and entities
+   */
+  private determineWorkflowType(
+    intent: IntentClassification,
+    entities: EntityExtraction
+  ): string {
+    if (intent.intent === "WEB_SCRAPING") return "web_scraping";
+    if (intent.intent === "AI_ANALYSIS") return "ai_analysis";
+    if (intent.intent === "DATA_PROCESSING") return "data_processing";
+    if (intent.intent === "SEARCH_AND_RETRIEVAL") return "search_retrieval";
+    if (
+      entities.dataTypes?.includes("resume") ||
+      entities.dataTypes?.includes("cv")
+    )
+      return "job_application";
+    return "general";
   }
 }
 

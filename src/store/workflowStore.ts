@@ -667,10 +667,44 @@ const processLLMNode = async (
   nodeLabelToId?: Map<string, string>
 ) => {
   const config = node.data.config;
-  const prompt = config.prompt || "Process the following input: {{input}}";
+  let prompt = config.prompt || "Process the following input: {{input}}";
   const model = config.model || "gpt-3.5-turbo";
   const temperature = config.temperature || 0.7;
   const maxTokens = config.maxTokens || 1000;
+
+  // Check if we should optimize the prompt
+  if (config.optimizePrompt !== false) {
+    try {
+      // Import the prompt optimizer
+      const { promptOptimizer } = require("../services/promptOptimizer");
+
+      // Create node context for optimization
+      const nodeContext = {
+        dataType: determineNodeDataType(node, nodeOutputs),
+        previousNodes: getPreviousNodeIds(node, nodeOutputs),
+        intent: "AI_ANALYSIS",
+        domain: determineNodeDomain(node, nodeOutputs),
+        workflowType: "ai_analysis",
+        availableData: nodeOutputs,
+      };
+
+      // Generate optimized prompt
+      const optimizedPrompt = promptOptimizer.generateOptimizedPrompt(
+        prompt,
+        extractEntitiesFromPrompt(prompt),
+        nodeContext,
+        nodeOutputs
+      );
+
+      // Use optimized prompt if it's different and better
+      if (optimizedPrompt && optimizedPrompt !== prompt) {
+        console.log("Using optimized prompt for LLM node:", node.id);
+        prompt = optimizedPrompt;
+      }
+    } catch (error) {
+      console.warn("Failed to optimize prompt, using original:", error);
+    }
+  }
 
   // Apply variable substitution to the prompt
   const processedPrompt = substituteVariables(
@@ -990,3 +1024,132 @@ const processStructuredOutputNode = async (
 
   return { output: mockStructuredOutput, model, schema };
 };
+
+// Helper functions for prompt optimization
+function determineNodeDataType(
+  node: WorkflowNode,
+  nodeOutputs: Map<string, NodeOutput>
+): string {
+  // Check if this is a data input node
+  if (node.data.type === "dataInput") {
+    return node.data.config?.dataType || "text";
+  }
+
+  // Check previous nodes for data type
+  const previousOutput = Array.from(nodeOutputs.values()).pop();
+  if (previousOutput?.data?.type) {
+    return previousOutput.data.type;
+  }
+
+  // Check if previous output looks like specific data types
+  if (previousOutput?.output) {
+    const output = previousOutput.output;
+    if (typeof output === "string") {
+      if (output.startsWith("http")) return "url";
+      if (output.includes("{") && output.includes("}")) return "json";
+      if (output.includes(",") && output.includes("\n")) return "csv";
+    }
+  }
+
+  return "text";
+}
+
+function getPreviousNodeIds(
+  node: WorkflowNode,
+  nodeOutputs: Map<string, NodeOutput>
+): string[] {
+  return Array.from(nodeOutputs.keys());
+}
+
+function determineNodeDomain(
+  node: WorkflowNode,
+  nodeOutputs: Map<string, NodeOutput>
+): string {
+  // Check node label for domain indicators
+  const label = node.data.label?.toLowerCase() || "";
+
+  if (
+    label.includes("resume") ||
+    label.includes("cv") ||
+    label.includes("job")
+  ) {
+    return "jobApplication";
+  }
+
+  if (
+    label.includes("financial") ||
+    label.includes("revenue") ||
+    label.includes("profit")
+  ) {
+    return "financial";
+  }
+
+  if (label.includes("legal") || label.includes("contract")) {
+    return "legal";
+  }
+
+  if (label.includes("medical") || label.includes("health")) {
+    return "medical";
+  }
+
+  if (label.includes("technical") || label.includes("code")) {
+    return "technical";
+  }
+
+  if (label.includes("content") || label.includes("marketing")) {
+    return "contentAnalysis";
+  }
+
+  // Check previous outputs for domain indicators
+  for (const output of nodeOutputs.values()) {
+    if (output.output && typeof output.output === "string") {
+      const text = output.output.toLowerCase();
+      if (text.includes("resume") || text.includes("cv"))
+        return "jobApplication";
+      if (text.includes("financial") || text.includes("revenue"))
+        return "financial";
+      if (text.includes("legal") || text.includes("contract")) return "legal";
+      if (text.includes("medical") || text.includes("health")) return "medical";
+      if (text.includes("technical") || text.includes("code"))
+        return "technical";
+      if (text.includes("content") || text.includes("marketing"))
+        return "contentAnalysis";
+    }
+  }
+
+  return "general";
+}
+
+function extractEntitiesFromPrompt(prompt: string): any {
+  // Simple entity extraction from prompt text
+  const entities: any = {
+    aiTasks: [],
+    dataTypes: [],
+  };
+
+  const lowerPrompt = prompt.toLowerCase();
+
+  // Extract AI tasks
+  if (lowerPrompt.includes("summarize")) entities.aiTasks.push("summarize");
+  if (lowerPrompt.includes("analyze")) entities.aiTasks.push("analyze");
+  if (lowerPrompt.includes("extract")) entities.aiTasks.push("extract");
+  if (lowerPrompt.includes("classify")) entities.aiTasks.push("classify");
+  if (lowerPrompt.includes("generate")) entities.aiTasks.push("generate");
+  if (lowerPrompt.includes("translate")) entities.aiTasks.push("translate");
+  if (lowerPrompt.includes("sentiment")) entities.aiTasks.push("sentiment");
+  if (lowerPrompt.includes("compare")) entities.aiTasks.push("compare");
+
+  // Extract data types
+  if (lowerPrompt.includes("resume") || lowerPrompt.includes("cv"))
+    entities.dataTypes.push("resume");
+  if (lowerPrompt.includes("pdf")) entities.dataTypes.push("pdf");
+  if (lowerPrompt.includes("json")) entities.dataTypes.push("json");
+  if (lowerPrompt.includes("csv")) entities.dataTypes.push("csv");
+  if (lowerPrompt.includes("url")) entities.dataTypes.push("url");
+  if (lowerPrompt.includes("financial")) entities.dataTypes.push("financial");
+  if (lowerPrompt.includes("legal")) entities.dataTypes.push("legal");
+  if (lowerPrompt.includes("medical")) entities.dataTypes.push("medical");
+  if (lowerPrompt.includes("technical")) entities.dataTypes.push("technical");
+
+  return entities;
+}

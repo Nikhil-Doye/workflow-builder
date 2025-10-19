@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { NodeData } from "../types";
 import { useWorkflowStore } from "../store/workflowStore";
-import { X, Settings } from "lucide-react";
+import { X, Settings, Sparkles } from "lucide-react";
+import { promptOptimizer } from "../services/promptOptimizer";
+import { callOpenAI } from "../services/openaiService";
 
 interface NodeConfigurationProps {
   nodeId: string;
@@ -192,6 +194,8 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
 }) => {
   const { updateNode, currentWorkflow } = useWorkflowStore();
   const config = nodeTypeConfigs[data.type];
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationResult, setOptimizationResult] = useState<string>("");
 
   // Get the latest node data from the store to ensure we have the most up-to-date config
   const currentNode = currentWorkflow?.nodes.find((node) => node.id === nodeId);
@@ -210,19 +214,163 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
     updateNode(nodeId, { label });
   };
 
+  const handleOptimizePrompt = async () => {
+    if (!currentData.config.prompt) {
+      alert("Please enter a prompt first");
+      return;
+    }
+
+    setIsOptimizing(true);
+    setOptimizationResult("");
+
+    try {
+      // Extract intent from the prompt itself
+      const prompt = currentData.config.prompt;
+      const entities = {
+        aiTasks: prompt.toLowerCase().includes("analyze")
+          ? ["analyze"]
+          : prompt.toLowerCase().includes("summarize")
+          ? ["summarize"]
+          : prompt.toLowerCase().includes("extract")
+          ? ["extract"]
+          : prompt.toLowerCase().includes("classify")
+          ? ["classify"]
+          : prompt.toLowerCase().includes("generate")
+          ? ["generate"]
+          : ["process"],
+        dataTypes: prompt.toLowerCase().includes("resume")
+          ? ["resume"]
+          : prompt.toLowerCase().includes("document")
+          ? ["document"]
+          : prompt.toLowerCase().includes("text")
+          ? ["text"]
+          : ["text"],
+        urls: [],
+        complexity: "medium",
+      };
+
+      // Create mock node context
+      const nodeContext = {
+        dataType: "text",
+        previousNodes: [],
+        intent: "AI_ANALYSIS",
+        domain: prompt.toLowerCase().includes("resume")
+          ? "jobApplication"
+          : prompt.toLowerCase().includes("financial")
+          ? "financial"
+          : prompt.toLowerCase().includes("legal")
+          ? "legal"
+          : "general",
+        workflowType: "ai_analysis",
+        availableData: new Map(),
+      };
+
+      // Generate optimized prompt using the prompt optimizer
+      const optimizedPrompt = promptOptimizer.generateOptimizedPrompt(
+        prompt,
+        entities,
+        nodeContext,
+        new Map()
+      );
+
+      // Make DeepSeek API call to further optimize the prompt
+      const apiResponse = await callOpenAI(
+        `You are a prompt optimization expert. Your task is to optimize the given prompt for better AI performance. 
+
+IMPORTANT: Return ONLY the optimized prompt. Do not include any explanations, comments, or additional text. Just the optimized prompt itself.
+
+Original Prompt: ${prompt}
+
+Optimized Template: ${optimizedPrompt}
+
+Return only the optimized prompt:`,
+        {
+          model: "deepseek-chat",
+          temperature: 0.7,
+          maxTokens: 1000,
+        }
+      );
+
+      // Clean up the response to ensure we only get the optimized prompt
+      let cleanedResult = apiResponse.content.trim();
+
+      // Remove common prefixes that might be added by the AI
+      const prefixesToRemove = [
+        "Optimized Prompt:",
+        "Here's the optimized prompt:",
+        "The optimized prompt is:",
+        "Optimized version:",
+        "Here is the optimized prompt:",
+        "Optimized prompt:",
+        "Here's the improved prompt:",
+        "Improved prompt:",
+        "Here is the improved prompt:",
+        "The improved prompt is:",
+        "Here's the enhanced prompt:",
+        "Enhanced prompt:",
+        "Here is the enhanced prompt:",
+        "The enhanced prompt is:",
+      ];
+
+      for (const prefix of prefixesToRemove) {
+        if (cleanedResult.toLowerCase().startsWith(prefix.toLowerCase())) {
+          cleanedResult = cleanedResult.substring(prefix.length).trim();
+        }
+      }
+
+      // Remove any quotes that might wrap the prompt
+      if (
+        (cleanedResult.startsWith('"') && cleanedResult.endsWith('"')) ||
+        (cleanedResult.startsWith("'") && cleanedResult.endsWith("'"))
+      ) {
+        cleanedResult = cleanedResult.slice(1, -1).trim();
+      }
+
+      setOptimizationResult(cleanedResult);
+    } catch (error) {
+      console.error("Error optimizing prompt:", error);
+      setOptimizationResult("Error optimizing prompt. Please try again.");
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
+  const applyOptimizedPrompt = () => {
+    if (optimizationResult) {
+      handleConfigChange("prompt", optimizationResult);
+      setOptimizationResult("");
+    }
+  };
+
   const renderField = (field: any) => {
     const value = currentData.config[field.key] || field.defaultValue || "";
 
     switch (field.type) {
       case "textarea":
         return (
-          <textarea
-            value={value}
-            onChange={(e) => handleConfigChange(field.key, e.target.value)}
-            placeholder={field.placeholder}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            rows={3}
-          />
+          <div className="space-y-2">
+            <textarea
+              value={value}
+              onChange={(e) => handleConfigChange(field.key, e.target.value)}
+              placeholder={field.placeholder}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              rows={3}
+            />
+            {data.type === "llmTask" && field.key === "prompt" && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleOptimizePrompt}
+                  disabled={isOptimizing || !currentData.config.prompt}
+                  className="flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-medium rounded-md hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>
+                    {isOptimizing ? "Optimizing..." : "Optimize Prompt"}
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
         );
       case "select":
         if (field.multiple) {
@@ -350,6 +498,49 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
               {renderField(field)}
             </div>
           ))}
+
+          {/* Optimization Result Display */}
+          {data.type === "llmTask" && optimizationResult && (
+            <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
+              <div className="flex items-center space-x-2 mb-3">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                <h4 className="text-sm font-semibold text-purple-800">
+                  Optimized Prompt Preview
+                </h4>
+                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+                  Preview
+                </span>
+              </div>
+              <div className="bg-white p-4 rounded-md border border-purple-100 shadow-sm">
+                <div className="mb-2 text-xs text-gray-500 font-medium">
+                  Optimized Prompt:
+                </div>
+                <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono leading-relaxed bg-gray-50 p-3 rounded border">
+                  {optimizationResult}
+                </pre>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="text-xs text-purple-600">
+                  Review the optimized prompt above and click "Apply" to replace
+                  your current prompt.
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setOptimizationResult("")}
+                    className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={applyOptimizedPrompt}
+                    className="px-3 py-1 bg-green-500 text-white text-xs font-medium rounded hover:bg-green-600 transition-colors"
+                  >
+                    Apply Optimized Prompt
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end space-x-2 p-4 border-t border-gray-200">
