@@ -46,6 +46,11 @@ export const DataInputNode: React.FC<DataInputNodeProps> = (props) => {
             metadata: result.data.metadata,
           },
         ];
+        console.log(
+          "PDF processing complete. Text length:",
+          result.data.text.length
+        );
+        console.log("Node outputs updated:", props.data.outputs);
       } else {
         alert(result.error || "Failed to process PDF");
       }
@@ -128,7 +133,7 @@ export const DataInputNode: React.FC<DataInputNodeProps> = (props) => {
               </div>
               {props.data.outputs.length > 0 && (
                 <div className="mt-2 text-xs text-green-700">
-                  ✓ Text extracted successfully
+                  ✓ Text extracted successfully - Ready to connect
                 </div>
               )}
             </div>

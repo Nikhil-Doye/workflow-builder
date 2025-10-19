@@ -50,6 +50,9 @@ export const substituteVariables = (
         console.warn(
           `Node ${nodeIdOrLabel} (${actualNodeId}) not found for variable ${match}`
         );
+        console.warn(
+          `Available nodes: ${Array.from(nodeOutputs.keys()).join(", ")}`
+        );
         return match; // Return original if node not found
       }
 
@@ -87,6 +90,9 @@ export const substituteVariables = (
       if (!nodeOutput) {
         console.warn(
           `Node ${trimmedPath} (${actualNodeId}) not found for variable ${match}`
+        );
+        console.warn(
+          `Available nodes: ${Array.from(nodeOutputs.keys()).join(", ")}`
         );
         return match;
       }

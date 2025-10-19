@@ -245,8 +245,14 @@ function generateNodeSequence(
     },
   });
 
-  // Add processing nodes based on intent
-  if (intent === "WEB_SCRAPING" || entities.urls?.length > 0) {
+  // Add processing nodes based on intent and data type
+  const inputDataType = determineInputDataType(entities);
+
+  // Only add web scraping if input is URL-based, not PDF
+  if (
+    (intent === "WEB_SCRAPING" || entities.urls?.length > 0) &&
+    inputDataType !== "pdf"
+  ) {
     nodes.push({
       type: "webScraping",
       label: "Web Scraper",
@@ -258,7 +264,12 @@ function generateNodeSequence(
     });
   }
 
-  if (intent === "AI_ANALYSIS" || entities.aiTasks?.length > 0) {
+  // Add AI analysis node for PDF or when AI tasks are requested
+  if (
+    intent === "AI_ANALYSIS" ||
+    entities.aiTasks?.length > 0 ||
+    inputDataType === "pdf"
+  ) {
     nodes.push({
       type: "llmTask",
       label: "AI Analyzer",
@@ -289,6 +300,20 @@ function generateNodeSequence(
         vectorStore: "pinecone",
         topK: 5,
         threshold: 0.8,
+      },
+    });
+  }
+
+  // Ensure PDF workflows have at least one processing node
+  if (inputDataType === "pdf" && nodes.length === 1) {
+    // Only data input node exists, add a default AI analyzer
+    nodes.push({
+      type: "llmTask",
+      label: "PDF Analyzer",
+      config: {
+        prompt: "Analyze and summarize the PDF content: {{input.output}}",
+        model: "deepseek-chat",
+        temperature: 0.7,
       },
     });
   }

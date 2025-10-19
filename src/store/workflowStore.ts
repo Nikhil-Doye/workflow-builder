@@ -395,10 +395,31 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       get().updateNodeStatus(dataInputNode.id, "running");
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Use test input if provided, otherwise use the node's default value
-      const inputData =
-        testInput || dataInputNode.data.config.defaultValue || "";
-      const dataInputResult = { output: inputData };
+      // Check if this is a PDF data input node with pre-processed data
+      let inputData: string;
+      let dataInputResult: any;
+
+      if (
+        dataInputNode.data.config?.dataType === "pdf" &&
+        dataInputNode.data.outputs?.length > 0
+      ) {
+        // Use the pre-processed PDF data
+        inputData = dataInputNode.data.outputs[0].output || "";
+        dataInputResult = {
+          output: inputData,
+          metadata: dataInputNode.data.outputs[0].metadata,
+          type: "pdf",
+        };
+        console.log(
+          "Using pre-processed PDF data:",
+          inputData.substring(0, 100) + "..."
+        );
+      } else {
+        // Use test input if provided, otherwise use the node's default value
+        inputData = testInput || dataInputNode.data.config.defaultValue || "";
+        dataInputResult = { output: inputData };
+      }
+
       get().updateNodeStatus(dataInputNode.id, "success", dataInputResult);
 
       // Store the data input node's output for variable substitution
@@ -735,10 +756,54 @@ const processWebScrapingNode = async (
 
   // Apply variable substitution to the URL
   const urlTemplate = config.url || "";
-  const url =
-    substituteVariables(urlTemplate, nodeOutputs, nodeLabelToId) ||
-    Array.from(nodeOutputs.values()).pop()?.output ||
-    "";
+  const substitutedUrl = substituteVariables(
+    urlTemplate,
+    nodeOutputs,
+    nodeLabelToId
+  );
+
+  // Check if variable substitution actually worked (no remaining variables)
+  const hasUnresolvedVariables = /\{\{[^}]+\}\}/.test(substitutedUrl);
+
+  let url = substitutedUrl;
+
+  // If substitution failed and we have unresolved variables, try fallback
+  if (hasUnresolvedVariables) {
+    console.warn(
+      `Variable substitution failed for URL template: "${urlTemplate}"`
+    );
+    console.warn(`Substituted result: "${substitutedUrl}"`);
+    console.warn(`Available node outputs:`, Array.from(nodeOutputs.keys()));
+
+    // Try to use the last node's output as fallback
+    const lastNodeOutput = Array.from(nodeOutputs.values()).pop()?.output;
+    if (
+      lastNodeOutput &&
+      typeof lastNodeOutput === "string" &&
+      lastNodeOutput.startsWith("http")
+    ) {
+      url = lastNodeOutput;
+      console.log(`Using fallback URL from last node: "${url}"`);
+    } else {
+      // If no valid fallback, return error
+      return {
+        output: `Error: Could not resolve URL from template "${urlTemplate}". No valid URL found in node outputs.`,
+        error: `Invalid URL template: "${urlTemplate}". Please ensure the referenced node exists and has a valid URL output.`,
+        url: urlTemplate,
+      };
+    }
+  }
+
+  // Validate that we have a proper URL
+  if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) {
+    return {
+      output: `Error: Invalid URL "${url}". URL must start with http:// or https://`,
+      error: `Invalid URL: "${url}". Please provide a valid URL or ensure variable substitution works correctly.`,
+      url: url,
+    };
+  }
+
+  console.log(`Web scraping node using URL: "${url}"`);
 
   // Sanitize requested formats: map unsupported values and dedupe
   const allowedFormats = new Set([
