@@ -15,7 +15,7 @@ import {
   FirecrawlConfig,
 } from "../services/firecrawlService";
 import { substituteVariables, NodeOutput } from "../utils/variableSubstitution";
-import { copilotService } from "../services/copilotService";
+import { agentManager } from "../services/agents/AgentManager";
 
 // localStorage key for workflows
 const WORKFLOWS_STORAGE_KEY = "agent-workflow-builder-workflows";
@@ -107,7 +107,7 @@ interface WorkflowStore {
   // Copilot methods
   generateWorkflowFromDescription: (description: string) => Promise<void>;
   applyCopilotSuggestions: (suggestions: any[]) => void;
-  validateGeneratedWorkflow: () => ValidationResult | null;
+  validateGeneratedWorkflow: () => Promise<ValidationResult | null>;
   getCopilotSuggestions: (context?: string) => Promise<string[]>;
 }
 
@@ -483,7 +483,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   // Copilot methods
   generateWorkflowFromDescription: async (description: string) => {
     try {
-      const parsedIntent = await copilotService.parseNaturalLanguage(
+      const parsedIntent = await agentManager.generateWorkflowFromDescription(
         description
       );
       const workflowStructure = parsedIntent.workflowStructure;
@@ -565,7 +565,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     });
   },
 
-  validateGeneratedWorkflow: (): ValidationResult | null => {
+  validateGeneratedWorkflow: async (): Promise<ValidationResult | null> => {
     const { currentWorkflow } = get();
     if (!currentWorkflow) return null;
 
@@ -591,42 +591,27 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       complexity: "medium",
     };
 
-    return copilotService.validateWorkflow(workflowStructure, "");
+    try {
+      return await agentManager.validateWorkflow(workflowStructure, "");
+    } catch (error) {
+      console.error("Error validating workflow:", error);
+      return {
+        isValid: false,
+        issues: ["Validation failed due to internal error"],
+        suggestions: ["Please check the workflow structure and try again"],
+        complexity: "unknown",
+        estimatedExecutionTime: 0,
+      };
+    }
   },
 
   getCopilotSuggestions: async (context?: string): Promise<string[]> => {
-    const { currentWorkflow } = get();
-
-    if (!currentWorkflow) {
-      return ["Start by creating a new workflow"];
+    try {
+      return await agentManager.getSuggestions(context);
+    } catch (error) {
+      console.error("Error getting copilot suggestions:", error);
+      return ["Unable to generate suggestions at this time"];
     }
-
-    // Convert current workflow to WorkflowStructure format
-    const workflowStructure: WorkflowStructure = {
-      nodes: currentWorkflow.nodes.map((node) => ({
-        type: node.type,
-        label: node.data.label,
-        config: node.data.config,
-        position: node.position,
-      })),
-      edges: currentWorkflow.edges.map((edge) => ({
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle,
-        targetHandle: edge.targetHandle,
-      })),
-      topology: {
-        type: "linear",
-        description: "Sequential processing",
-        parallelExecution: false,
-      },
-      complexity: "medium",
-    };
-
-    return await copilotService.generateContextualSuggestions(
-      workflowStructure,
-      context || ""
-    );
   },
 }));
 

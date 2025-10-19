@@ -106,7 +106,7 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
       await generateWorkflowFromDescription(userMessage.content);
 
       // Get validation results
-      const validationResult = validateGeneratedWorkflow();
+      const validationResult = await validateGeneratedWorkflow();
       setValidation(validationResult);
 
       // Add success message
