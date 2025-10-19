@@ -8,6 +8,8 @@ import {
   Globe,
   Brain,
   ArrowDownToLine,
+  Key,
+  Settings,
 } from "lucide-react";
 
 interface OnboardingModalProps {
@@ -28,8 +30,8 @@ const steps = [
           <Zap className="w-8 h-8 text-white" />
         </div>
         <p className="text-gray-600">
-          Connect AI models, web scraping, and data processing in minutes. No
-          coding required!
+          Connect AI models, web scraping, vector search, and data processing in
+          minutes. No coding required!
         </p>
       </div>
     ),
@@ -69,6 +71,24 @@ const steps = [
             <p className="text-xs text-gray-600">Process with AI</p>
           </div>
         </div>
+        <div className="flex items-center space-x-3 p-3 bg-orange-50 rounded-lg">
+          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+            <Key className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="font-medium text-sm">Embedding</p>
+            <p className="text-xs text-gray-600">Generate vectors</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-3 p-3 bg-indigo-50 rounded-lg">
+          <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+            <Settings className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="font-medium text-sm">Similarity Search</p>
+            <p className="text-xs text-gray-600">Find similar content</p>
+          </div>
+        </div>
       </div>
     ),
   },
@@ -91,9 +111,11 @@ const steps = [
         <div className="bg-blue-50 rounded-lg p-4">
           <h4 className="font-medium text-sm mb-2">Configuration:</h4>
           <ul className="text-xs text-gray-600 space-y-1">
-            <li>• Set prompts for AI tasks</li>
+            <li>• Set prompts for AI tasks (with optimization)</li>
             <li>• Configure URLs for web scraping</li>
-            <li>• Choose output formats</li>
+            <li>• Choose output formats and schemas</li>
+            <li>• Set vector search parameters</li>
+            <li>• Configure embedding models</li>
           </ul>
         </div>
       </div>
@@ -101,6 +123,46 @@ const steps = [
   },
   {
     id: 4,
+    title: "Configure API Keys",
+    description: "Set up your API keys to enable full functionality.",
+    icon: Key,
+    content: (
+      <div className="space-y-4">
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4">
+          <h4 className="font-medium text-sm mb-2">Required API Keys:</h4>
+          <ul className="text-xs text-gray-600 space-y-1">
+            <li>
+              • <strong>DeepSeek:</strong> For AI tasks and prompt optimization
+            </li>
+            <li>
+              • <strong>Pinecone:</strong> For vector search and similarity
+              matching
+            </li>
+            <li>
+              • <strong>Firecrawl:</strong> For web scraping operations
+            </li>
+          </ul>
+        </div>
+        <div className="bg-blue-50 rounded-lg p-4">
+          <h4 className="font-medium text-sm mb-2">How to Configure:</h4>
+          <ul className="text-xs text-gray-600 space-y-1">
+            <li>• Click "API Keys" button in the workflow toolbar</li>
+            <li>• Enter your API keys in the settings modal</li>
+            <li>• Keys are stored locally in your browser</li>
+            <li>• Test your Pinecone API key automatically</li>
+          </ul>
+        </div>
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            Get started with demo workflows or configure APIs for full
+            functionality!
+          </p>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: 5,
     title: "Execute & Monitor",
     description: "Run your workflows and monitor execution in real-time.",
     icon: ArrowDownToLine,
@@ -113,6 +175,16 @@ const steps = [
             <li>• Step-by-step execution logs</li>
             <li>• Error handling and debugging</li>
             <li>• Export results as JSON</li>
+            <li>• Prompt optimization with AI</li>
+          </ul>
+        </div>
+        <div className="bg-purple-50 rounded-lg p-4">
+          <h4 className="font-medium text-sm mb-2">New Features:</h4>
+          <ul className="text-xs text-gray-600 space-y-1">
+            <li>• Vector embeddings and similarity search</li>
+            <li>• Pinecone integration for vector databases</li>
+            <li>• Enhanced AI prompt optimization</li>
+            <li>• Improved error handling and feedback</li>
           </ul>
         </div>
         <div className="text-center">
