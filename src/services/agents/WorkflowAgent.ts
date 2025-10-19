@@ -1,11 +1,10 @@
 import {
-  AgentTask,
   AgentResult,
   AgentContext,
   ToolExecutionPlan,
 } from "../../types/tools";
 import { toolRegistry } from "../tools/ToolRegistry";
-import { ParsedIntent, WorkflowStructure, ValidationResult } from "../../types";
+import { ParsedIntent } from "../../types";
 
 export class WorkflowAgent {
   private context: AgentContext;

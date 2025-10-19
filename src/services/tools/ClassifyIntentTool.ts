@@ -200,14 +200,12 @@ Respond with JSON:
 
     // Determine complexity level
     let complexity = "SIMPLE";
-    let complexityScore = 0;
 
     Object.entries(complexityIndicators).forEach(([type, keywords]) => {
       const matches = keywords.filter((keyword) =>
         input.includes(keyword)
       ).length;
       if (matches > 0) {
-        complexityScore += matches;
         if (type === "complex" && matches >= 2) complexity = "ENTERPRISE";
         else if (type === "multiStep" && matches >= 2) complexity = "COMPLEX";
         else if (matches >= 1 && complexity === "SIMPLE")
