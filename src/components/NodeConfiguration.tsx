@@ -16,6 +16,7 @@ import {
 } from "./ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { DatabaseNodeConfiguration } from "./DatabaseNodeConfiguration";
 
 interface NodeConfigurationProps {
   nodeId: string;
@@ -326,6 +327,25 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
       },
     });
   };
+
+  // Check if this is a database node and use the enhanced configuration
+  const isDatabaseNode = [
+    "databaseQuery",
+    "databaseInsert",
+    "databaseUpdate",
+    "databaseDelete",
+  ].includes(data.type);
+
+  if (isDatabaseNode) {
+    return (
+      <DatabaseNodeConfiguration
+        nodeId={nodeId}
+        data={data}
+        onClose={onClose}
+        onConfigChange={handleConfigChange}
+      />
+    );
+  }
 
   const handleLabelChange = (label: string) => {
     updateNode(nodeId, { label });

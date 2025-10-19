@@ -21,6 +21,7 @@ import {
 import { searchSimilarVectors } from "../services/pineconeService";
 import { substituteVariables, NodeOutput } from "../utils/variableSubstitution";
 import { agentManager } from "../services/agents/AgentManager";
+import { executionEngine, ExecutionPlan } from "../services/executionEngine";
 
 // localStorage key for workflows
 const WORKFLOWS_STORAGE_KEY = "agent-workflow-builder-workflows";
@@ -75,6 +76,17 @@ interface WorkflowStore {
   selectedNodeId: string | null;
   isExecuting: boolean;
   executionResults: Record<string, any>;
+  currentExecution: ExecutionPlan | null;
+  executionMode: "sequential" | "parallel" | "conditional";
+  executionConfig: {
+    maxConcurrency: number;
+    timeout: number;
+    retryPolicy: {
+      maxRetries: number;
+      retryDelay: number;
+      backoffMultiplier: number;
+    };
+  };
 
   // Workflow management
   createWorkflow: (name: string) => void;
@@ -101,7 +113,19 @@ interface WorkflowStore {
   deleteEdge: (edgeId: string) => void;
 
   // Execution
-  executeWorkflow: (testInput?: string) => Promise<void>;
+  executeWorkflow: (
+    testInput?: string,
+    options?: {
+      mode?: "sequential" | "parallel" | "conditional";
+      maxConcurrency?: number;
+      timeout?: number;
+      retryPolicy?: {
+        maxRetries: number;
+        retryDelay: number;
+        backoffMultiplier: number;
+      };
+    }
+  ) => Promise<void>;
   updateNodeStatus: (
     nodeId: string,
     status: NodeStatus,
@@ -109,6 +133,11 @@ interface WorkflowStore {
     error?: string
   ) => void;
   clearExecutionResults: () => void;
+  setExecutionMode: (mode: "sequential" | "parallel" | "conditional") => void;
+  updateExecutionConfig: (
+    config: Partial<WorkflowStore["executionConfig"]>
+  ) => void;
+  getExecutionStats: () => any;
 
   // Copilot methods
   generateWorkflowFromDescription: (description: string) => Promise<void>;
@@ -132,6 +161,17 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   selectedNodeId: null,
   isExecuting: false,
   executionResults: {},
+  currentExecution: null,
+  executionMode: "sequential",
+  executionConfig: {
+    maxConcurrency: 5,
+    timeout: 300000, // 5 minutes
+    retryPolicy: {
+      maxRetries: 3,
+      retryDelay: 1000,
+      backoffMultiplier: 2,
+    },
+  },
 
   createWorkflow: (name: string) => {
     const newWorkflow = createEmptyWorkflow(name);
@@ -355,152 +395,95 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     }));
   },
 
-  executeWorkflow: async (testInput?: string) => {
-    const { currentWorkflow } = get();
+  executeWorkflow: async (
+    testInput?: string,
+    options?: {
+      mode?: "sequential" | "parallel" | "conditional";
+      maxConcurrency?: number;
+      timeout?: number;
+      retryPolicy?: {
+        maxRetries: number;
+        retryDelay: number;
+        backoffMultiplier: number;
+      };
+    }
+  ) => {
+    const { currentWorkflow, executionMode, executionConfig } = get();
     if (!currentWorkflow) return;
 
     set({ isExecuting: true, executionResults: {} });
 
-    // Map to track node outputs for variable substitution
-    const nodeOutputs = new Map<string, NodeOutput>();
-
-    // Create a mapping from node labels to node IDs for easier variable substitution
-    const nodeLabelToId = new Map<string, string>();
-    currentWorkflow.nodes.forEach((node) => {
-      const label = node.data.label.toLowerCase().replace(/\s+/g, "-");
-      nodeLabelToId.set(label, node.id);
-      // Also map common patterns
-      if (node.data.type === "dataInput") {
-        nodeLabelToId.set("input-1", node.id);
-        nodeLabelToId.set("data-input", node.id);
-      } else if (node.data.type === "webScraping") {
-        nodeLabelToId.set("scraper-1", node.id);
-        nodeLabelToId.set("web-scraper", node.id);
-      } else if (node.data.type === "llmTask") {
-        nodeLabelToId.set("llm-1", node.id);
-        nodeLabelToId.set("llm-task", node.id);
-      } else if (node.data.type === "dataOutput") {
-        nodeLabelToId.set("output-1", node.id);
-        nodeLabelToId.set("data-output", node.id);
-      }
-    });
-
     try {
-      // Find the first data input node to start with
-      const dataInputNode = currentWorkflow.nodes.find(
-        (node) => node.data.type === "dataInput"
+      // Prepare execution options
+      const execOptions = {
+        mode: options?.mode || executionMode,
+        maxConcurrency:
+          options?.maxConcurrency || executionConfig.maxConcurrency,
+        timeout: options?.timeout || executionConfig.timeout,
+        retryPolicy: options?.retryPolicy || executionConfig.retryPolicy,
+      };
+
+      // If test input is provided, update the data input node
+      if (testInput) {
+        const dataInputNode = currentWorkflow.nodes.find(
+          (node) => node.data.type === "dataInput"
+        );
+        if (dataInputNode) {
+          // Update the node's config with test input
+          const updatedNodes = currentWorkflow.nodes.map((node) =>
+            node.id === dataInputNode.id
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    config: {
+                      ...node.data.config,
+                      defaultValue: testInput,
+                    },
+                  },
+                }
+              : node
+          );
+          set({ currentWorkflow: { ...currentWorkflow, nodes: updatedNodes } });
+        }
+      }
+
+      // Execute using the advanced execution engine
+      const execution = await executionEngine.executeWorkflow(
+        currentWorkflow.id,
+        currentWorkflow.nodes,
+        currentWorkflow.edges,
+        execOptions
       );
 
-      if (!dataInputNode) {
-        console.error("No data input node found in workflow");
-        return;
-      }
+      // Store the execution plan
+      set({ currentExecution: execution });
 
-      // Start with the data input node
-      get().updateNodeStatus(dataInputNode.id, "running");
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Check if this is a PDF data input node with pre-processed data
-      let inputData: string;
-      let dataInputResult: any;
-
-      if (
-        dataInputNode.data.config?.dataType === "pdf" &&
-        dataInputNode.data.outputs?.length > 0
-      ) {
-        // Use the pre-processed PDF data
-        inputData = dataInputNode.data.outputs[0].output || "";
-        dataInputResult = {
-          output: inputData,
-          metadata: dataInputNode.data.outputs[0].metadata,
-          type: "pdf",
-        };
-        console.log(
-          "Using pre-processed PDF data:",
-          inputData.substring(0, 100) + "..."
-        );
-      } else {
-        // Use test input if provided, otherwise use the node's default value
-        inputData = testInput || dataInputNode.data.config.defaultValue || "";
-        dataInputResult = { output: inputData };
-      }
-
-      get().updateNodeStatus(dataInputNode.id, "success", dataInputResult);
-
-      // Store the data input node's output for variable substitution
-      nodeOutputs.set(dataInputNode.id, {
-        nodeId: dataInputNode.id,
-        output: inputData,
-        data: dataInputResult,
-        status: "success",
+      // Convert execution results to the format expected by the UI
+      const results: Record<string, any> = {};
+      execution.nodes.forEach((node) => {
+        if (node.outputs.has("output")) {
+          results[node.nodeId] = {
+            status: node.status === "completed" ? "success" : node.status,
+            data: node.outputs.get("output"),
+            error: node.error,
+            executionTime: node.duration,
+          };
+        }
       });
 
-      // Process remaining nodes in order
-      const remainingNodes = currentWorkflow.nodes.filter(
-        (node) => node.id !== dataInputNode.id
-      );
-
-      for (const node of remainingNodes) {
-        get().updateNodeStatus(node.id, "running");
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // Process node based on type with variable substitution
-        let result;
-        switch (node.data.type) {
-          case "llmTask":
-            result = await processLLMNode(node, nodeOutputs, nodeLabelToId);
-            break;
-          case "dataOutput":
-            result = await processDataOutputNode(
-              node,
-              nodeOutputs,
-              nodeLabelToId
-            );
-            break;
-          case "webScraping":
-            result = await processWebScrapingNode(
-              node,
-              nodeOutputs,
-              nodeLabelToId
-            );
-            break;
-          case "embeddingGenerator":
-            result = await processEmbeddingNode(
-              node,
-              nodeOutputs,
-              nodeLabelToId
-            );
-            break;
-          case "similaritySearch":
-            result = await processSimilaritySearchNode(
-              node,
-              nodeOutputs,
-              nodeLabelToId
-            );
-            break;
-          case "structuredOutput":
-            result = await processStructuredOutputNode(
-              node,
-              nodeOutputs,
-              nodeLabelToId
-            );
-            break;
-          default:
-            result = { output: `Processed by ${node.data.type} node` };
-        }
-
-        get().updateNodeStatus(node.id, "success", result);
-
-        // Store the node's output for future variable substitution
-        nodeOutputs.set(node.id, {
-          nodeId: node.id,
-          output: result.output,
-          data: result,
-          status: "success",
-        });
-      }
+      set({ executionResults: results });
     } catch (error) {
       console.error("Workflow execution failed:", error);
+      // Update all nodes to error status
+      const errorResults: Record<string, any> = {};
+      currentWorkflow.nodes.forEach((node) => {
+        errorResults[node.id] = {
+          status: "error",
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      });
+      set({ executionResults: errorResults });
     } finally {
       set({ isExecuting: false });
     }
@@ -527,7 +510,23 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   },
 
   clearExecutionResults: () => {
-    set({ executionResults: {}, isExecuting: false });
+    set({ executionResults: {}, isExecuting: false, currentExecution: null });
+  },
+
+  setExecutionMode: (mode: "sequential" | "parallel" | "conditional") => {
+    set({ executionMode: mode });
+  },
+
+  updateExecutionConfig: (
+    config: Partial<WorkflowStore["executionConfig"]>
+  ) => {
+    set((state) => ({
+      executionConfig: { ...state.executionConfig, ...config },
+    }));
+  },
+
+  getExecutionStats: () => {
+    return executionEngine.getExecutionStats();
   },
 
   // Copilot methods

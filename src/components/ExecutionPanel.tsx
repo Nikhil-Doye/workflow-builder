@@ -1,5 +1,7 @@
 import React from "react";
 import { useWorkflowStore } from "../store/workflowStore";
+import { ExecutionConfiguration } from "./ExecutionConfiguration";
+import { ExecutionPlanPreview } from "./ExecutionPlanPreview";
 import {
   Play,
   Square,
@@ -18,6 +20,10 @@ import {
   Globe,
   Brain,
   ArrowRight,
+  Settings,
+  BarChart3,
+  Layers,
+  GitBranch,
 } from "lucide-react";
 
 export const ExecutionPanel: React.FC = () => {
@@ -27,12 +33,18 @@ export const ExecutionPanel: React.FC = () => {
     executionResults,
     executeWorkflow,
     clearExecutionResults,
+    executionMode,
+    currentExecution,
+    getExecutionStats,
   } = useWorkflowStore();
 
   const [expandedNodes, setExpandedNodes] = React.useState<Set<string>>(
     new Set()
   );
   const [showOutputs, setShowOutputs] = React.useState(true);
+  const [showConfig, setShowConfig] = React.useState(false);
+  const [showStats, setShowStats] = React.useState(false);
+  const [showPlanPreview, setShowPlanPreview] = React.useState(false);
 
   const handleExecute = async () => {
     if (currentWorkflow) {
@@ -137,6 +149,43 @@ export const ExecutionPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-2">
+            {/* Execution Mode Badge */}
+            <div className="flex items-center space-x-1 px-2 py-1 bg-white/80 rounded-lg">
+              {executionMode === "sequential" && (
+                <Play className="w-3 h-3 text-blue-500" />
+              )}
+              {executionMode === "parallel" && (
+                <Activity className="w-3 h-3 text-green-500" />
+              )}
+              {executionMode === "conditional" && (
+                <GitBranch className="w-3 h-3 text-purple-500" />
+              )}
+              <span className="text-xs font-medium text-gray-700 capitalize">
+                {executionMode}
+              </span>
+            </div>
+
+            <button
+              onClick={() => setShowStats(!showStats)}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              title={showStats ? "Hide statistics" : "Show statistics"}
+            >
+              <BarChart3 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setShowPlanPreview(true)}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Execution plan preview"
+            >
+              <Layers className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setShowConfig(true)}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Execution configuration"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
             <button
               onClick={() => setShowOutputs(!showOutputs)}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -338,7 +387,73 @@ export const ExecutionPanel: React.FC = () => {
             })}
           </div>
         </div>
+
+        {/* Execution Statistics */}
+        {showStats && (
+          <div className="p-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex items-center space-x-2 mb-3">
+              <BarChart3 className="w-4 h-4 text-purple-500" />
+              <h4 className="text-sm font-semibold text-gray-900">
+                Statistics
+              </h4>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {(() => {
+                const stats = getExecutionStats();
+                return [
+                  {
+                    label: "Total",
+                    value: stats.totalExecutions,
+                    color: "text-gray-600",
+                  },
+                  {
+                    label: "Active",
+                    value: stats.activeExecutions,
+                    color: "text-blue-600",
+                  },
+                  {
+                    label: "Completed",
+                    value: stats.completedExecutions,
+                    color: "text-green-600",
+                  },
+                  {
+                    label: "Failed",
+                    value: stats.failedExecutions,
+                    color: "text-red-600",
+                  },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="text-center p-2 bg-white rounded-lg"
+                  >
+                    <div className={`text-lg font-bold ${stat.color}`}>
+                      {stat.value}
+                    </div>
+                    <div className="text-xs text-gray-500">{stat.label}</div>
+                  </div>
+                ));
+              })()}
+            </div>
+            <div className="mt-3 text-center p-2 bg-white rounded-lg">
+              <div className="text-sm font-semibold text-gray-900">
+                Avg: {Math.round(getExecutionStats().averageDuration)}ms
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Execution Configuration Modal */}
+      <ExecutionConfiguration
+        isOpen={showConfig}
+        onClose={() => setShowConfig(false)}
+      />
+
+      {/* Execution Plan Preview Modal */}
+      <ExecutionPlanPreview
+        isOpen={showPlanPreview}
+        onClose={() => setShowPlanPreview(false)}
+      />
     </div>
   );
 };

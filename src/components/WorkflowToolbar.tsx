@@ -9,12 +9,18 @@ import {
   RotateCcw,
   Key,
   Check,
+  Database,
+  Clock,
+  Activity,
+  GitBranch,
 } from "lucide-react";
 import {
   downloadWorkflow,
   loadWorkflowFromFile,
 } from "../utils/workflowSerialization";
 import { ApiKeysSettings } from "./ApiKeysSettings";
+import { DatabaseConnectionManager } from "./DatabaseConnectionManager";
+import { WorkflowScheduler } from "./WorkflowScheduler";
 import { Button } from "./ui/button";
 
 export const WorkflowToolbar: React.FC = () => {
@@ -24,10 +30,14 @@ export const WorkflowToolbar: React.FC = () => {
     executeWorkflow,
     isExecuting,
     clearAllNodes,
+    executionMode,
+    setExecutionMode,
   } = useWorkflowStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showApiKeysSettings, setShowApiKeysSettings] = useState(false);
+  const [showDatabaseManager, setShowDatabaseManager] = useState(false);
+  const [showScheduler, setShowScheduler] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
   const handleSave = () => {
@@ -130,7 +140,65 @@ export const WorkflowToolbar: React.FC = () => {
           API Keys
         </Button>
 
+        <Button
+          onClick={() => setShowDatabaseManager(true)}
+          variant="default"
+          title="Database Connections"
+        >
+          <Database className="w-4 h-4 mr-2" />
+          Databases
+        </Button>
+
+        <Button
+          onClick={() => setShowScheduler(true)}
+          variant="default"
+          title="Schedule Workflows"
+        >
+          <Clock className="w-4 h-4 mr-2" />
+          Schedule
+        </Button>
+
         <div className="w-px h-6 bg-gray-300" />
+
+        {/* Execution Mode Selector */}
+        <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setExecutionMode("sequential")}
+            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+              executionMode === "sequential"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+            title="Sequential execution"
+          >
+            <Play className="w-3 h-3" />
+            <span>Seq</span>
+          </button>
+          <button
+            onClick={() => setExecutionMode("parallel")}
+            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+              executionMode === "parallel"
+                ? "bg-white text-green-600 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+            title="Parallel execution"
+          >
+            <Activity className="w-3 h-3" />
+            <span>Par</span>
+          </button>
+          <button
+            onClick={() => setExecutionMode("conditional")}
+            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+              executionMode === "conditional"
+                ? "bg-white text-purple-600 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+            title="Conditional execution"
+          >
+            <GitBranch className="w-3 h-3" />
+            <span>Cond</span>
+          </button>
+        </div>
 
         <Button
           onClick={handleExecute}
@@ -175,6 +243,23 @@ export const WorkflowToolbar: React.FC = () => {
         <ApiKeysSettings
           isOpen={showApiKeysSettings}
           onClose={() => setShowApiKeysSettings(false)}
+        />
+      )}
+
+      {/* Database Connection Manager Modal */}
+      {showDatabaseManager && (
+        <DatabaseConnectionManager
+          isOpen={showDatabaseManager}
+          onClose={() => setShowDatabaseManager(false)}
+        />
+      )}
+
+      {/* Workflow Scheduler Modal */}
+      {showScheduler && (
+        <WorkflowScheduler
+          isOpen={showScheduler}
+          onClose={() => setShowScheduler(false)}
+          workflowId={currentWorkflow?.id}
         />
       )}
     </div>
