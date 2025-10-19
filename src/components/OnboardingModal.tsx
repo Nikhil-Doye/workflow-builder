@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  X,
   ArrowRight,
   ArrowLeft,
   Check,
@@ -11,6 +10,15 @@ import {
   Key,
   Settings,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "./ui/dialog";
+import { Button } from "./ui/button";
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -228,30 +236,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-hidden p-0">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
+        <DialogHeader className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
                 <currentStepData.icon className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <DialogTitle className="text-lg font-semibold text-gray-900">
                   {currentStepData.title}
-                </h2>
-                <p className="text-sm text-gray-600">
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600">
                   {currentStepData.description}
-                </p>
+                </DialogDescription>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
 
           {/* Progress Bar */}
@@ -275,7 +277,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               {Math.round(((currentStep + 1) / steps.length) * 100)}% complete
             </span>
           </div>
-        </div>
+        </DialogHeader>
 
         {/* Content */}
         <div className="p-6 flex-1 overflow-y-auto">
@@ -283,29 +285,31 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <button
+        <DialogFooter className="p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-between w-full">
+            <Button
               onClick={handleSkip}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              variant="ghost"
+              className="text-sm text-gray-500 hover:text-gray-700"
             >
               Skip tutorial
-            </button>
+            </Button>
 
             <div className="flex items-center space-x-3">
               {!isFirstStep && (
-                <button
+                <Button
                   onClick={handlePrevious}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                  variant="outline"
+                  className="flex items-center space-x-2"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Previous</span>
-                </button>
+                </Button>
               )}
 
-              <button
+              <Button
                 onClick={handleNext}
-                className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               >
                 <span>{isLastStep ? "Get Started" : "Next"}</span>
                 {isLastStep ? (
@@ -313,11 +317,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 ) : (
                   <ArrowRight className="w-4 h-4" />
                 )}
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

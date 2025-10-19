@@ -5,9 +5,10 @@
   "private": true,
   "dependencies": {
     "@mendable/firecrawl-js": "^4.4.0",
+    "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.3",
     "@types/node": "^16.18.0",
-    "@types/react": "^18.2.0",
+    "@types/react": "^18.3.26",
     "@types/react-dom": "^18.2.0",
     "@types/uuid": "^9.0.2",
     "autoprefixer": "^10.4.14",

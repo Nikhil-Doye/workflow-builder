@@ -173,7 +173,10 @@ export const WorkflowToolbar: React.FC = () => {
 
       {/* API Keys Settings Modal */}
       {showApiKeysSettings && (
-        <ApiKeysSettings onClose={() => setShowApiKeysSettings(false)} />
+        <ApiKeysSettings
+          isOpen={showApiKeysSettings}
+          onClose={() => setShowApiKeysSettings(false)}
+        />
       )}
     </div>
   );
