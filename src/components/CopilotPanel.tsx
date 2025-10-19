@@ -109,15 +109,21 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
       const validationResult = await validateGeneratedWorkflow();
       setValidation(validationResult);
 
-      // Add success message
+      // Add success message with enhanced complexity info
+      const complexityInfo = validationResult?.complexity || "medium";
+      const nodeCount = currentWorkflow?.nodes.length || 0;
+      const complexityEmoji =
+        {
+          SIMPLE: "🟢",
+          MODERATE: "🟡",
+          COMPLEX: "🟠",
+          ENTERPRISE: "🔴",
+        }[complexityInfo] || "🟡";
+
       const successMessage: ChatMessage = {
         id: (Date.now() + 2).toString(),
         type: "assistant",
-        content: `✅ Workflow generated successfully! I've created a ${
-          validationResult?.complexity || "medium"
-        } complexity workflow with ${
-          currentWorkflow?.nodes.length || 0
-        } nodes.`,
+        content: `✅ Workflow generated successfully! I've created a ${complexityEmoji} ${complexityInfo.toLowerCase()} complexity workflow with ${nodeCount} nodes.`,
         timestamp: new Date(),
         data: { validation: validationResult },
       };

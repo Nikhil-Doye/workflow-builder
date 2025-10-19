@@ -78,7 +78,12 @@ You are an AI workflow designer. Analyze the user's request and create a compreh
 
 User Request: "${userInput}"
 Intent: ${intent.intent} (confidence: ${intent.confidence})
+Complexity: ${intent.complexity || "SIMPLE"}
 Reasoning: ${intent.reasoning}
+
+Step Breakdown: ${JSON.stringify(intent.stepBreakdown || [], null, 2)}
+Data Flow: ${intent.dataFlow || "Not specified"}
+Integration Points: ${intent.integrationPoints?.join(", ") || "None"}
 
 Extracted Entities:
 - URLs: ${entities.urls.join(", ") || "None"}
@@ -86,6 +91,14 @@ Extracted Entities:
 - Output Formats: ${entities.outputFormats.join(", ") || "None"}
 - AI Tasks: ${entities.aiTasks.join(", ") || "None"}
 - Processing Steps: ${entities.processingSteps.join(", ") || "None"}
+
+Based on the complexity level (${
+      intent.complexity || "SIMPLE"
+    }), create an appropriate workflow:
+- SIMPLE: 1-3 nodes, linear flow
+- MODERATE: 4-6 nodes, some branching
+- COMPLEX: 7+ nodes, multiple data sources, conditional logic
+- ENTERPRISE: 10+ nodes, parallel processing, error handling
 
 Available node types and their purposes:
 - dataInput: Entry point for data (text, JSON, CSV, URL, PDF, etc.)

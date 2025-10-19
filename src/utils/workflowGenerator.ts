@@ -58,13 +58,20 @@ const generateNodeLabel = (intent: string, index: number): string => {
 export function generateWorkflowStructure(
   parsedIntent: ParsedIntent
 ): WorkflowStructure {
-  const { intent, entities } = parsedIntent;
+  const { intent, entities, workflowStructure } = parsedIntent;
 
-  // Determine workflow topology
+  // Use enhanced intent classification if available
+  if (workflowStructure && workflowStructure.nodes) {
+    return workflowStructure;
+  }
+
+  // Fallback to original logic for backward compatibility
   const topology = determineWorkflowTopology(intent, entities);
 
-  // Generate node sequence
-  const nodes = generateNodeSequence(intent, entities);
+  // Generate node sequence - use step breakdown if available
+  const nodes =
+    generateNodeSequenceFromStepBreakdown(intent, entities) ||
+    generateNodeSequence(intent, entities);
 
   // Generate edges
   const edges = generateEdges(nodes, topology);
@@ -80,6 +87,18 @@ export function generateWorkflowStructure(
     estimatedExecutionTime: estimateExecutionTime(nodes),
     validationRules: generateValidationRules(nodes),
   };
+}
+
+/**
+ * Generate node sequence from step breakdown (Phase 1 enhancement)
+ */
+function generateNodeSequenceFromStepBreakdown(
+  intent: any,
+  entities: any
+): WorkflowNodeStructure[] | null {
+  // This will be implemented when we have access to the enhanced intent data
+  // For now, return null to use fallback
+  return null;
 }
 
 /**

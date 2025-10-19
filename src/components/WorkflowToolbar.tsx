@@ -22,7 +22,6 @@ export const WorkflowToolbar: React.FC = () => {
     saveWorkflow,
     executeWorkflow,
     isExecuting,
-    clearExecutionResults,
     clearAllNodes,
   } = useWorkflowStore();
 

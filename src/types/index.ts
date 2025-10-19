@@ -66,6 +66,15 @@ export interface IntentClassification {
   intent: string;
   confidence: number;
   reasoning: string;
+  complexity?: string;
+  stepBreakdown?: Array<{
+    step: number;
+    operation: string;
+    description: string;
+    nodeType: string;
+  }>;
+  dataFlow?: string;
+  integrationPoints?: string[];
 }
 
 export interface EntityExtraction {
