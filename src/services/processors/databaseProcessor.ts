@@ -5,7 +5,7 @@ export default async function databaseProcessor(
   context: ExecutionContext,
   plan: ExecutionPlan
 ): Promise<any> {
-  const { config, inputs } = context;
+  const { config } = context;
 
   try {
     if (!config.connectionId) {

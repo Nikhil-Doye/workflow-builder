@@ -23,10 +23,6 @@ export interface MySQLConfig extends ConnectorConfig {
 export class MySQLConnector extends BaseConnector {
   private connection: any = null;
 
-  constructor(config: MySQLConfig) {
-    super(config);
-  }
-
   async connect(): Promise<boolean> {
     try {
       if (!this.validateConfig()) {
@@ -35,7 +31,7 @@ export class MySQLConnector extends BaseConnector {
 
       // In a real implementation, you would use a MySQL client like 'mysql2'
       // For now, we'll simulate the connection
-      const { host, port, database, username, password, ssl } = this.config
+      const { host, port, database, username, password } = this.config
         .credentials as MySQLConfig["credentials"];
 
       // Simulate connection validation

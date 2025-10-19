@@ -105,8 +105,8 @@ export class ExecutionEngine {
   ): ExecutionPlan {
     const executionNodes: ExecutionContext[] = nodes.map((node) => ({
       nodeId: node.id,
-      nodeType: node.type,
-      config: node.config || {},
+      nodeType: node.data?.type || node.type,
+      config: node.data?.config || node.config || {},
       inputs: new Map(),
       outputs: new Map(),
       status: "pending",
@@ -457,8 +457,8 @@ export class ExecutionEngine {
     condition: string,
     plan: ExecutionPlan
   ): Promise<boolean> {
-    // Simple condition evaluation
-    // In production, use a proper expression evaluator
+    // Simple condition evaluation using Function constructor (safer than eval)
+    // In production, use a proper expression evaluator library
     try {
       // Replace variables with actual values
       let evaluatedCondition = condition;
@@ -476,8 +476,10 @@ export class ExecutionEngine {
         }
       );
 
-      // Evaluate the condition
-      return eval(evaluatedCondition);
+      // Evaluate the condition using Function constructor (safer than eval)
+      // This creates a function in a controlled scope
+      const evaluateExpression = new Function("return " + evaluatedCondition);
+      return evaluateExpression();
     } catch (error) {
       console.error("Error evaluating condition:", error);
       return false;
@@ -566,6 +568,10 @@ export class ExecutionEngine {
   private async getNodeProcessor(nodeType: string): Promise<any> {
     // Import the appropriate processor
     switch (nodeType) {
+      case "dataInput":
+        return (await import("./processors/dataInputProcessor")).default;
+      case "dataOutput":
+        return (await import("./processors/dataOutputProcessor")).default;
       case "webScraping":
         return (await import("./processors/webScrapingProcessor")).default;
       case "llmTask":

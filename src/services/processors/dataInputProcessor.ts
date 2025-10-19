@@ -1,25 +1,24 @@
 import { ExecutionContext, ExecutionPlan } from "../executionEngine";
 
-export default async function defaultProcessor(
+export default async function dataInputProcessor(
   context: ExecutionContext,
   plan: ExecutionPlan
 ): Promise<any> {
-  const { inputs } = context;
+  const { config } = context;
 
   try {
-    // Get input data from previous nodes
-    const inputData = Array.from(inputs.values()).pop() || "";
+    // Get the input data from the config
+    const inputData = config.defaultValue || config.input || "";
 
-    // For unknown node types, just pass through the data
     return {
       input: inputData,
       output: inputData,
-      type: "default",
+      type: "dataInput",
       success: true,
     };
   } catch (error) {
     throw new Error(
-      `Default processing failed: ${
+      `Data input processing failed: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
     );

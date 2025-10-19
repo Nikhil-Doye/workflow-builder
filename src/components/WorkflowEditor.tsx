@@ -18,6 +18,7 @@ import { useWorkflowStore } from "../store/workflowStore";
 import { NodeConfiguration } from "./NodeConfiguration";
 import { WorkflowToolbar } from "./WorkflowToolbar";
 import { CopilotPanel } from "./CopilotPanel";
+import { NodeLibrary } from "./NodeLibrary";
 import {
   WebScrapingNode,
   LLMNode,
@@ -33,24 +34,7 @@ import {
   DatabaseDeleteNode,
 } from "./nodes";
 import { NodeData } from "../types";
-import {
-  Search,
-  Grid,
-  List,
-  Brain,
-  Globe,
-  ArrowRight,
-  Database,
-  FileText,
-  Search as SearchIcon,
-  X,
-  Trash2,
-  Sparkles,
-  // Database icons
-  Plus as PlusIcon,
-  Edit,
-  Trash2 as TrashIcon,
-} from "lucide-react";
+import { Grid, Trash2, Sparkles, X } from "lucide-react";
 
 const nodeTypes: NodeTypes = {
   webScraping: WebScrapingNode,
@@ -80,6 +64,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     deleteEdge,
     selectNode,
     selectedNodeId,
+    panelStates,
+    togglePanel,
   } = useWorkflowStore();
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -93,11 +79,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     }
   }, [currentWorkflow, setNodes, setEdges]);
   const [showConfig, setShowConfig] = useState(false);
-  const [showNodePalette, setShowNodePalette] = useState(true);
   const [showCopilot, setShowCopilot] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
@@ -222,127 +204,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     [deleteEdge, setEdges]
   );
 
-  const nodeTypesList = [
-    {
-      type: "dataInput",
-      label: "Data Input",
-      icon: ArrowRight,
-      description: "Start your workflow with data",
-      color: "blue",
-      category: "Input",
-    },
-    {
-      type: "webScraping",
-      label: "Web Scraping",
-      icon: Globe,
-      description: "Extract content from websites",
-      color: "green",
-      category: "Data",
-    },
-    {
-      type: "llmTask",
-      label: "AI Task",
-      icon: Brain,
-      description: "Process with AI models",
-      color: "purple",
-      category: "AI",
-    },
-    {
-      type: "embeddingGenerator",
-      label: "Embedding",
-      icon: Database,
-      description: "Generate vector embeddings",
-      color: "indigo",
-      category: "AI",
-    },
-    {
-      type: "similaritySearch",
-      label: "Similarity Search",
-      icon: SearchIcon,
-      description: "Find similar content",
-      color: "orange",
-      category: "AI",
-    },
-    {
-      type: "structuredOutput",
-      label: "Structured Output",
-      icon: FileText,
-      description: "Format data with schemas",
-      color: "pink",
-      category: "Output",
-    },
-    {
-      type: "dataOutput",
-      label: "Data Output",
-      icon: ArrowRight,
-      description: "Export your results",
-      color: "blue",
-      category: "Output",
-    },
-    // Database nodes
-    {
-      type: "databaseQuery",
-      label: "Database Query",
-      icon: Database,
-      description: "Query database with SQL",
-      color: "cyan",
-      category: "Database",
-    },
-    {
-      type: "databaseInsert",
-      label: "Database Insert",
-      icon: PlusIcon,
-      description: "Insert data into database",
-      color: "emerald",
-      category: "Database",
-    },
-    {
-      type: "databaseUpdate",
-      label: "Database Update",
-      icon: Edit,
-      description: "Update existing records",
-      color: "amber",
-      category: "Database",
-    },
-    {
-      type: "databaseDelete",
-      label: "Database Delete",
-      icon: TrashIcon,
-      description: "Delete records from database",
-      color: "red",
-      category: "Database",
-    },
-  ];
-
-  const categories = [
-    { name: "All", count: nodeTypesList.length },
-    {
-      name: "Input",
-      count: nodeTypesList.filter((n) => n.category === "Input").length,
-    },
-    {
-      name: "AI",
-      count: nodeTypesList.filter((n) => n.category === "AI").length,
-    },
-    {
-      name: "Data",
-      count: nodeTypesList.filter((n) => n.category === "Data").length,
-    },
-    {
-      name: "Database",
-      count: nodeTypesList.filter((n) => n.category === "Database").length,
-    },
-    {
-      name: "Output",
-      count: nodeTypesList.filter((n) => n.category === "Output").length,
-    },
-  ];
-
-  const onDragStart = (event: React.DragEvent, nodeType: string) => {
-    event.dataTransfer.setData("application/reactflow", nodeType);
-    event.dataTransfer.effectAllowed = "move";
-  };
-
   const onInit = useCallback((instance: ReactFlowInstance) => {
     setReactFlowInstance(instance);
   }, []);
@@ -351,173 +212,25 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     (node) => node.id === selectedNodeId
   );
 
-  // Filter nodes based on search and category
-  const filteredNodes = nodeTypesList.filter((nodeType) => {
-    const matchesSearch =
-      nodeType.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      nodeType.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "All" || nodeType.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const getColorClasses = (color: string) => {
-    const colorMap = {
-      blue: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100",
-      green: "bg-green-50 border-green-200 text-green-700 hover:bg-green-100",
-      purple:
-        "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100",
-      indigo:
-        "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100",
-      orange:
-        "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100",
-      pink: "bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-100",
-      // Database colors
-      cyan: "bg-cyan-50 border-cyan-200 text-cyan-700 hover:bg-cyan-100",
-      emerald:
-        "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100",
-      amber: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100",
-      red: "bg-red-50 border-red-200 text-red-700 hover:bg-red-100",
-    };
-    return (
-      colorMap[color as keyof typeof colorMap] ||
-      "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
-    );
-  };
-
   return (
-    <div className="h-screen flex bg-gray-50">
-      {/* Node Palette */}
-      <div
-        className={`w-72 md:w-80 bg-white border-r border-gray-200 transition-transform duration-300 flex flex-col ${
-          showNodePalette ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Node Library
-            </h3>
-            <button
-              onClick={() => setShowNodePalette(false)}
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search nodes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            />
-          </div>
-
-          {/* Categories */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {categories.map((category) => (
-              <button
-                key={category.name}
-                onClick={() => setSelectedCategory(category.name)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                  selectedCategory === category.name
-                    ? "bg-blue-100 text-blue-700 border border-blue-200"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {category.name} ({category.count})
-              </button>
-            ))}
-          </div>
-
-          {/* View Mode Toggle */}
-          <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-md transition-colors ${
-                viewMode === "grid"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500"
-              }`}
-            >
-              <Grid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-md transition-colors ${
-                viewMode === "list"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500"
-              }`}
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Node List */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div
-            className={`space-y-2 ${
-              viewMode === "grid" ? "grid grid-cols-1 gap-3" : ""
-            }`}
-          >
-            {filteredNodes.map((nodeType) => {
-              const IconComponent = nodeType.icon;
-              return (
-                <div
-                  key={nodeType.type}
-                  className={`group flex items-center space-x-3 p-3 rounded-xl border cursor-move transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5 ${getColorClasses(
-                    nodeType.color
-                  )}`}
-                  draggable
-                  onDragStart={(event) => onDragStart(event, nodeType.type)}
-                >
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 rounded-lg bg-white/80 flex items-center justify-center">
-                      <IconComponent className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium truncate">
-                        {nodeType.label}
-                      </span>
-                      <span className="text-xs px-1.5 py-0.5 bg-white/60 rounded-full">
-                        {nodeType.category}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 truncate">
-                      {nodeType.description}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+    <div className="h-screen flex bg-gray-50 overflow-hidden">
+      {/* Node Library */}
+      <NodeLibrary />
 
       {/* Main Editor */}
-      <div className="flex-1 flex flex-col bg-white">
+      <div className="flex-1 flex flex-col bg-white min-w-0">
         <WorkflowToolbar />
 
         {/* Secondary Toolbar */}
         <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => setShowNodePalette(!showNodePalette)}
+              onClick={() => togglePanel("nodeLibrary")}
               className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
             >
               <Grid className="w-4 h-4" />
               <span className="font-medium">
-                {showNodePalette ? "Hide" : "Show"} Library
+                {panelStates.nodeLibrary.isCollapsed ? "Show" : "Hide"} Library
               </span>
             </button>
 
@@ -562,7 +275,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
         </div>
 
         {/* React Flow */}
-        <div className="flex-1 relative" ref={reactFlowWrapper}>
+        <div className="flex-1 relative min-h-0" ref={reactFlowWrapper}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -578,12 +291,21 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
             onInit={onInit}
             nodeTypes={nodeTypes}
             fitView
+            fitViewOptions={{
+              padding: 0.1,
+              includeHiddenNodes: false,
+              minZoom: 0.1,
+              maxZoom: 2,
+            }}
             attributionPosition="bottom-left"
             className="bg-gradient-to-br from-gray-50 to-blue-50/30"
+            minZoom={0.1}
+            maxZoom={2}
           >
             <Controls
-              className="!bg-white !border !border-gray-200 !rounded-lg !shadow-lg"
+              className="!bg-white !border !border-gray-200 !rounded-lg !shadow-lg !p-1"
               position="top-right"
+              showInteractive={false}
             />
             <MiniMap
               className="!bg-white !border !border-gray-200 !rounded-lg !shadow-lg"
@@ -598,16 +320,35 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
                     return "#8b5cf6";
                   case "dataOutput":
                     return "#f59e0b";
+                  case "databaseQuery":
+                  case "databaseInsert":
+                  case "databaseUpdate":
+                  case "databaseDelete":
+                    return "#06b6d4";
+                  case "embeddingGenerator":
+                    return "#f59e0b";
+                  case "similaritySearch":
+                    return "#f97316";
+                  case "structuredOutput":
+                    return "#8b5cf6";
                   default:
                     return "#6b7280";
                 }
               }}
+              nodeStrokeWidth={2}
+              nodeBorderRadius={4}
+              maskColor="rgba(0, 0, 0, 0.1)"
+              style={{
+                width: 200,
+                height: 120,
+              }}
             />
             <Background
               variant={BackgroundVariant.Dots}
-              gap={20}
-              size={1.5}
+              gap={16}
+              size={1}
               color="#e5e7eb"
+              className="opacity-60"
             />
           </ReactFlow>
         </div>

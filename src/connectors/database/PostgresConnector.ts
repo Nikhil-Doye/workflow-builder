@@ -23,10 +23,6 @@ export interface PostgresConfig extends ConnectorConfig {
 export class PostgresConnector extends BaseConnector {
   private connection: any = null;
 
-  constructor(config: PostgresConfig) {
-    super(config);
-  }
-
   async connect(): Promise<boolean> {
     try {
       if (!this.validateConfig()) {
@@ -35,7 +31,7 @@ export class PostgresConnector extends BaseConnector {
 
       // In a real implementation, you would use a PostgreSQL client like 'pg'
       // For now, we'll simulate the connection
-      const { host, port, database, username, password, ssl } = this.config
+      const { host, port, database, username, password } = this.config
         .credentials as PostgresConfig["credentials"];
 
       // Simulate connection validation

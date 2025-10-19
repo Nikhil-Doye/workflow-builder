@@ -21,10 +21,6 @@ export interface MongoConfig extends ConnectorConfig {
 export class MongoConnector extends BaseConnector {
   private connection: any = null;
 
-  constructor(config: MongoConfig) {
-    super(config);
-  }
-
   async connect(): Promise<boolean> {
     try {
       if (!this.validateConfig()) {
