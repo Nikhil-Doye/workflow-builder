@@ -23,6 +23,7 @@ export const WorkflowToolbar: React.FC = () => {
     executeWorkflow,
     isExecuting,
     clearExecutionResults,
+    clearAllNodes,
   } = useWorkflowStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,7 +71,7 @@ export const WorkflowToolbar: React.FC = () => {
   };
 
   const handleClear = () => {
-    clearExecutionResults();
+    clearAllNodes();
   };
 
   if (!currentWorkflow) return null;
@@ -156,10 +157,10 @@ export const WorkflowToolbar: React.FC = () => {
         <button
           onClick={handleClear}
           className="flex items-center space-x-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-          title="Clear execution results"
+          title="Reset workflow (clear all nodes)"
         >
           <RotateCcw className="w-4 h-4" />
-          <span>Clear</span>
+          <span>Reset</span>
         </button>
       </div>
 

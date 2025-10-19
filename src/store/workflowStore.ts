@@ -83,6 +83,7 @@ interface WorkflowStore {
   addNode: (type: string, position: { x: number; y: number }) => void;
   updateNode: (nodeId: string, data: Partial<NodeData>) => void;
   deleteNode: (nodeId: string) => void;
+  clearAllNodes: () => void;
   selectNode: (nodeId: string | null) => void;
 
   // Edge management
@@ -278,6 +279,29 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
           }
         : null,
     }));
+  },
+
+  clearAllNodes: () => {
+    // Clear execution state first
+    set((state) => ({
+      selectedNodeId: null,
+      executionResults: {},
+      isExecuting: false,
+    }));
+
+    // Use setTimeout to allow React Flow to properly handle node removal
+    setTimeout(() => {
+      set((state) => ({
+        currentWorkflow: state.currentWorkflow
+          ? {
+              ...state.currentWorkflow,
+              nodes: [],
+              edges: [],
+              updatedAt: new Date(),
+            }
+          : null,
+      }));
+    }, 0);
   },
 
   selectNode: (nodeId: string | null) => {
