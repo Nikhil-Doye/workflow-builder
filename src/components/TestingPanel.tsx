@@ -36,18 +36,46 @@ export const TestingPanel: React.FC = () => {
     if (!currentWorkflow) return;
 
     setTestResults(null);
-    await executeWorkflow(testInput);
 
-    // Collect all results
-    const results = currentWorkflow.nodes.map((node) => ({
-      nodeId: node.id,
-      nodeLabel: node.data.label,
-      status: executionResults[node.id]?.status || "idle",
-      data: executionResults[node.id]?.data,
-      error: executionResults[node.id]?.error,
-    }));
+    try {
+      console.log("Starting test execution:", {
+        currentWorkflow: currentWorkflow.id,
+        testInput,
+        nodeCount: currentWorkflow.nodes.length,
+      });
 
-    setTestResults(results);
+      await executeWorkflow(testInput);
+
+      // Wait a bit for the execution to complete and results to be processed
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      console.log("Execution completed, collecting results:", {
+        executionResults,
+      });
+
+      // Collect all results
+      const results = currentWorkflow.nodes.map((node) => ({
+        nodeId: node.id,
+        nodeLabel: node.data.label,
+        status: executionResults[node.id]?.status || "idle",
+        data: executionResults[node.id]?.data,
+        error: executionResults[node.id]?.error,
+      }));
+
+      console.log("Collected results:", results);
+      setTestResults(results);
+    } catch (error) {
+      console.error("Test execution failed:", error);
+      // Set error results
+      const errorResults = currentWorkflow.nodes.map((node) => ({
+        nodeId: node.id,
+        nodeLabel: node.data.label,
+        status: "error",
+        data: null,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }));
+      setTestResults(errorResults);
+    }
   };
 
   const handleLoadSample = (sample: any) => {

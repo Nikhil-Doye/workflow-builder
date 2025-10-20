@@ -23,7 +23,13 @@ export type NodeType =
   | "databaseUpdate"
   | "databaseDelete";
 
-export type NodeStatus = "idle" | "running" | "success" | "error";
+export type NodeStatus =
+  | "idle"
+  | "running"
+  | "success"
+  | "completed"
+  | "error"
+  | "failed";
 
 export interface WorkflowNode {
   id: string;

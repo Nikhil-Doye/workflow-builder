@@ -124,7 +124,19 @@ const statusConfig = {
     bg: "bg-green-100",
     pulse: false,
   },
+  completed: {
+    icon: CheckCircle,
+    color: "text-green-500",
+    bg: "bg-green-100",
+    pulse: false,
+  },
   error: {
+    icon: XCircle,
+    color: "text-red-500",
+    bg: "bg-red-100",
+    pulse: false,
+  },
+  failed: {
     icon: XCircle,
     color: "text-red-500",
     bg: "bg-red-100",
@@ -141,9 +153,14 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
   selected,
   ...props
 }) => {
-  const Icon = nodeIcons[data.type];
-  const colors = nodeColors[data.type];
-  const status = statusConfig[data.status];
+  // Debug logging
+  if (!data.type || !data.status) {
+    console.warn("BaseNode received invalid data:", data);
+  }
+
+  const Icon = nodeIcons[data.type] || FileText;
+  const colors = nodeColors[data.type] || nodeColors.dataInput;
+  const status = statusConfig[data.status] || statusConfig.idle;
   const StatusIcon = status.icon;
 
   return (

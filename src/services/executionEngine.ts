@@ -65,11 +65,25 @@ export class ExecutionEngine {
         retryDelay: number;
         backoffMultiplier: number;
       };
-    } = {}
+    } = {},
+    onNodeUpdate?: (
+      nodeId: string,
+      status: string,
+      data?: any,
+      error?: string
+    ) => void
   ): Promise<ExecutionPlan> {
     const executionId = `exec_${Date.now()}_${Math.random()
       .toString(36)
       .substr(2, 9)}`;
+
+    console.log(`Starting workflow execution:`, {
+      executionId,
+      workflowId,
+      nodeCount: nodes.length,
+      edgeCount: edges.length,
+      options,
+    });
 
     const plan = this.createExecutionPlan(workflowId, nodes, edges, options);
     plan.id = executionId;
@@ -77,7 +91,7 @@ export class ExecutionEngine {
     this.activeExecutions.set(executionId, plan);
 
     try {
-      await this.executePlan(plan);
+      await this.executePlan(plan, onNodeUpdate);
       plan.status = "completed";
     } catch (error) {
       plan.status = "failed";
@@ -113,6 +127,16 @@ export class ExecutionEngine {
       retryCount: 0,
       maxRetries: options.retryPolicy?.maxRetries || 3,
     }));
+
+    console.log("Creating execution plan:", {
+      workflowId,
+      nodeCount: nodes.length,
+      executionNodes: executionNodes.map((n) => ({
+        id: n.nodeId,
+        type: n.nodeType,
+      })),
+      edges: edges.map((e) => ({ from: e.source, to: e.target })),
+    });
 
     const executionEdges = edges.map((edge) => ({
       from: edge.source,
@@ -286,19 +310,27 @@ export class ExecutionEngine {
   }
 
   // Execute the execution plan
-  private async executePlan(plan: ExecutionPlan): Promise<void> {
+  private async executePlan(
+    plan: ExecutionPlan,
+    onNodeUpdate?: (
+      nodeId: string,
+      status: string,
+      data?: any,
+      error?: string
+    ) => void
+  ): Promise<void> {
     plan.status = "running";
     plan.startTime = new Date();
 
     switch (plan.executionMode) {
       case "sequential":
-        await this.executeSequential(plan);
+        await this.executeSequential(plan, onNodeUpdate);
         break;
       case "parallel":
-        await this.executeParallel(plan);
+        await this.executeParallel(plan, onNodeUpdate);
         break;
       case "conditional":
-        await this.executeConditional(plan);
+        await this.executeConditional(plan, onNodeUpdate);
         break;
       default:
         throw new Error(`Unsupported execution mode: ${plan.executionMode}`);
@@ -306,20 +338,47 @@ export class ExecutionEngine {
   }
 
   // Sequential execution
-  private async executeSequential(plan: ExecutionPlan): Promise<void> {
+  private async executeSequential(
+    plan: ExecutionPlan,
+    onNodeUpdate?: (
+      nodeId: string,
+      status: string,
+      data?: any,
+      error?: string
+    ) => void
+  ): Promise<void> {
     const executionOrder = this.getExecutionOrder(plan.nodes, plan.edges);
 
-    for (const nodeId of executionOrder) {
+    console.log("Execution order:", executionOrder);
+    console.log(
+      "Plan nodes:",
+      plan.nodes.map((n) => ({ id: n.nodeId, type: n.nodeType }))
+    );
+    console.log("Plan edges:", plan.edges);
+
+    // If no execution order is determined (e.g., no edges), execute all nodes in order
+    const nodesToExecute =
+      executionOrder.length > 0
+        ? executionOrder
+        : plan.nodes.map((n) => n.nodeId);
+    console.log("Nodes to execute:", nodesToExecute);
+
+    for (const nodeId of nodesToExecute) {
       const context = plan.nodes.find((n) => n.nodeId === nodeId);
       if (!context) continue;
 
       try {
-        await this.executeNode(context, plan);
+        await this.executeNode(context, plan, onNodeUpdate);
       } catch (error) {
         context.status = "failed";
         context.error =
           error instanceof Error ? error.message : "Unknown error";
         plan.errors.set(nodeId, context.error);
+
+        // Notify about the error
+        if (onNodeUpdate) {
+          onNodeUpdate(nodeId, "failed", undefined, context.error);
+        }
 
         // Decide whether to continue or stop
         if (!this.shouldContinueOnError(plan, nodeId)) {
@@ -330,7 +389,15 @@ export class ExecutionEngine {
   }
 
   // Parallel execution
-  private async executeParallel(plan: ExecutionPlan): Promise<void> {
+  private async executeParallel(
+    plan: ExecutionPlan,
+    onNodeUpdate?: (
+      nodeId: string,
+      status: string,
+      data?: any,
+      error?: string
+    ) => void
+  ): Promise<void> {
     const parallelGroups = this.createParallelGroups(
       plan.nodes,
       plan.edges,
@@ -339,7 +406,7 @@ export class ExecutionEngine {
 
     // Execute groups in parallel
     const groupPromises = parallelGroups.map((group) =>
-      this.executeParallelGroup(group, plan)
+      this.executeParallelGroup(group, plan, onNodeUpdate)
     );
 
     await Promise.allSettled(groupPromises);
@@ -348,13 +415,19 @@ export class ExecutionEngine {
   // Execute a parallel group
   private async executeParallelGroup(
     group: ParallelGroup,
-    plan: ExecutionPlan
+    plan: ExecutionPlan,
+    onNodeUpdate?: (
+      nodeId: string,
+      status: string,
+      data?: any,
+      error?: string
+    ) => void
   ): Promise<void> {
     const nodePromises = group.nodes.map((nodeId) => {
       const context = plan.nodes.find((n) => n.nodeId === nodeId);
       if (!context) return Promise.resolve();
 
-      return this.executeNode(context, plan);
+      return this.executeNode(context, plan, onNodeUpdate);
     });
 
     if (group.waitForAll) {
@@ -365,7 +438,15 @@ export class ExecutionEngine {
   }
 
   // Conditional execution
-  private async executeConditional(plan: ExecutionPlan): Promise<void> {
+  private async executeConditional(
+    plan: ExecutionPlan,
+    onNodeUpdate?: (
+      nodeId: string,
+      status: string,
+      data?: any,
+      error?: string
+    ) => void
+  ): Promise<void> {
     const executionOrder = this.getExecutionOrder(plan.nodes, plan.edges);
     const visited = new Set<string>();
 
@@ -376,19 +457,29 @@ export class ExecutionEngine {
       if (!context) continue;
 
       try {
-        await this.executeNode(context, plan);
+        await this.executeNode(context, plan, onNodeUpdate);
         visited.add(nodeId);
 
         // Check for conditional branches
         const branches = this.getConditionalBranches(nodeId, plan);
         if (branches.length > 0) {
-          await this.executeConditionalBranches(branches, plan, visited);
+          await this.executeConditionalBranches(
+            branches,
+            plan,
+            visited,
+            onNodeUpdate
+          );
         }
       } catch (error) {
         context.status = "failed";
         context.error =
           error instanceof Error ? error.message : "Unknown error";
         plan.errors.set(nodeId, context.error);
+
+        // Notify about the error
+        if (onNodeUpdate) {
+          onNodeUpdate(nodeId, "failed", undefined, context.error);
+        }
       }
     }
   }
@@ -421,7 +512,13 @@ export class ExecutionEngine {
   private async executeConditionalBranches(
     branches: ConditionalBranch[],
     plan: ExecutionPlan,
-    visited: Set<string>
+    visited: Set<string>,
+    onNodeUpdate?: (
+      nodeId: string,
+      status: string,
+      data?: any,
+      error?: string
+    ) => void
   ): Promise<void> {
     for (const branch of branches) {
       const shouldExecuteTrue = await this.evaluateCondition(
@@ -440,13 +537,18 @@ export class ExecutionEngine {
         if (!context) continue;
 
         try {
-          await this.executeNode(context, plan);
+          await this.executeNode(context, plan, onNodeUpdate);
           visited.add(nodeId);
         } catch (error) {
           context.status = "failed";
           context.error =
             error instanceof Error ? error.message : "Unknown error";
           plan.errors.set(nodeId, context.error);
+
+          // Notify about the error
+          if (onNodeUpdate) {
+            onNodeUpdate(nodeId, "failed", undefined, context.error);
+          }
         }
       }
     }
@@ -518,17 +620,38 @@ export class ExecutionEngine {
   // Execute a single node
   private async executeNode(
     context: ExecutionContext,
-    plan: ExecutionPlan
+    plan: ExecutionPlan,
+    onNodeUpdate?: (
+      nodeId: string,
+      status: string,
+      data?: any,
+      error?: string
+    ) => void
   ): Promise<void> {
     context.status = "running";
     context.startTime = new Date();
 
+    // Notify that node is starting
+    if (onNodeUpdate) {
+      onNodeUpdate(context.nodeId, "running");
+    }
+
     try {
+      console.log(`Executing node ${context.nodeId} (${context.nodeType}):`, {
+        config: context.config,
+        inputs: Array.from(context.inputs.entries()),
+      });
+
       // Import the appropriate node processor
       const processor = await this.getNodeProcessor(context.nodeType);
 
       // Execute the node
       const result = await processor(context, plan);
+
+      console.log(`Node ${context.nodeId} completed successfully:`, {
+        result: result,
+        duration: context.duration,
+      });
 
       // Store the result
       context.outputs.set("output", result);
@@ -539,12 +662,22 @@ export class ExecutionEngine {
 
       // Store in plan results
       plan.results.set(context.nodeId, result);
+
+      // Notify that node completed successfully
+      if (onNodeUpdate) {
+        onNodeUpdate(context.nodeId, "completed", result);
+      }
     } catch (error) {
       context.status = "failed";
       context.error = error instanceof Error ? error.message : "Unknown error";
       context.endTime = new Date();
       context.duration =
         context.endTime.getTime() - context.startTime.getTime();
+
+      // Notify about the error
+      if (onNodeUpdate) {
+        onNodeUpdate(context.nodeId, "failed", undefined, context.error);
+      }
 
       // Handle retries
       if (context.retryCount < context.maxRetries) {
@@ -557,7 +690,7 @@ export class ExecutionEngine {
         );
 
         // Retry execution
-        return this.executeNode(context, plan);
+        return this.executeNode(context, plan, onNodeUpdate);
       }
 
       throw error;
@@ -566,6 +699,8 @@ export class ExecutionEngine {
 
   // Get node processor based on type
   private async getNodeProcessor(nodeType: string): Promise<any> {
+    console.log(`Loading processor for node type: ${nodeType}`);
+
     // Import the appropriate processor
     switch (nodeType) {
       case "dataInput":
@@ -585,6 +720,7 @@ export class ExecutionEngine {
       case "similaritySearch":
         return (await import("./processors/similarityProcessor")).default;
       default:
+        console.log(`Using default processor for unknown type: ${nodeType}`);
         return (await import("./processors/defaultProcessor")).default;
     }
   }
@@ -603,8 +739,8 @@ export class ExecutionEngine {
 
     // Build dependency graph
     edges.forEach((edge) => {
-      dependencies.get(edge.source)!.add(edge.target);
-      inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+      dependencies.get(edge.from)!.add(edge.to);
+      inDegree.set(edge.to, (inDegree.get(edge.to) || 0) + 1);
     });
 
     // Topological sort

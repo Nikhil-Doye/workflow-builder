@@ -479,7 +479,16 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         currentWorkflow.id,
         currentWorkflow.nodes,
         currentWorkflow.edges,
-        execOptions
+        execOptions,
+        (nodeId, status, data, error) => {
+          // Update node status in real-time
+          console.log(`Node ${nodeId} status updated:`, {
+            status,
+            data,
+            error,
+          });
+          get().updateNodeStatus(nodeId, status as NodeStatus, data, error);
+        }
       );
 
       // Store the execution plan
