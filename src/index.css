@@ -192,4 +192,40 @@
   .node-data-output {
     @apply bg-orange-50 border-orange-200 text-orange-700;
   }
+
+  /* Accessibility */
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+  }
+
+  /* Focus styles for better accessibility */
+  .focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .react-flow__node {
+      @apply border-4;
+    }
+
+    .react-flow__edge {
+      @apply stroke-4;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-slide-up,
+    .animate-bounce-gentle {
+      animation: none;
+    }
+
+    .transition-all {
+      transition: none;
+    }
+  }
 }
