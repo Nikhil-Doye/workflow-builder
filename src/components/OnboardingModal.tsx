@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowRight,
   ArrowLeft,
@@ -9,6 +9,10 @@ import {
   ArrowDownToLine,
   Key,
   Settings,
+  X,
+  RotateCcw,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   Dialog,
@@ -19,10 +23,12 @@ import {
   DialogFooter,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
+import { OnboardingManager } from "../utils/onboardingManager";
 
 interface OnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onComplete?: () => void;
 }
 
 const steps = [
@@ -208,17 +214,39 @@ const steps = [
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   isOpen,
   onClose,
+  onComplete,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [preferences, setPreferences] = useState(
+    OnboardingManager.getPreferences()
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      setPreferences(OnboardingManager.getPreferences());
+      // Start from the first incomplete step
+      const firstIncompleteStep = steps.findIndex(
+        (step) => !OnboardingManager.hasCompletedStep(step.id)
+      );
+      setCurrentStep(Math.max(0, firstIncompleteStep));
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const currentStepData = steps[currentStep];
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === steps.length - 1;
+  const progress = ((currentStep + 1) / steps.length) * 100;
 
   const handleNext = () => {
+    // Mark current step as completed
+    OnboardingManager.markStepCompleted(currentStepData.id);
+
     if (isLastStep) {
+      OnboardingManager.markOnboardingCompleted();
+      onComplete?.();
       onClose();
     } else {
       setCurrentStep(currentStep + 1);
@@ -232,7 +260,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   };
 
   const handleSkip = () => {
+    OnboardingManager.optOutOfOnboarding();
     onClose();
+  };
+
+  const handleReset = () => {
+    OnboardingManager.resetOnboarding();
+    setCurrentStep(0);
+    setPreferences(OnboardingManager.getPreferences());
+  };
+
+  const handleToggleStartup = () => {
+    const newShowOnStartup = !preferences.showOnboardingOnStartup;
+    if (newShowOnStartup) {
+      OnboardingManager.enableOnboardingOnStartup();
+    } else {
+      OnboardingManager.disableOnboardingOnStartup();
+    }
+    setPreferences(OnboardingManager.getPreferences());
   };
 
   return (
@@ -241,18 +286,37 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         {/* Header */}
         <DialogHeader className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 flex-1">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
                 <currentStepData.icon className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <DialogTitle className="text-lg font-semibold text-gray-900">
+              <div className="flex-1">
+                <DialogTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   {currentStepData.title}
+                  {OnboardingManager.hasCompletedStep(currentStepData.id) && (
+                    <Check className="w-4 h-4 text-green-500" />
+                  )}
                 </DialogTitle>
                 <DialogDescription className="text-sm text-gray-600">
                   {currentStepData.description}
                 </DialogDescription>
               </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
@@ -283,6 +347,76 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         <div className="p-6 flex-1 overflow-y-auto">
           {currentStepData.content}
         </div>
+
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className="p-6 border-t border-gray-200 bg-gray-50">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Onboarding Settings
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Show onboarding on startup
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    Display this tutorial when you have no workflows
+                  </p>
+                </div>
+                <button
+                  onClick={handleToggleStartup}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    preferences.showOnboardingOnStartup
+                      ? "bg-blue-600"
+                      : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      preferences.showOnboardingOnStartup
+                        ? "translate-x-6"
+                        : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Reset tutorial
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    Start the tutorial from the beginning
+                  </p>
+                </div>
+                <Button
+                  onClick={handleReset}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Reset</span>
+                </Button>
+              </div>
+
+              <div className="pt-2 border-t border-gray-200">
+                <div className="text-xs text-gray-500">
+                  <p>
+                    Progress: {OnboardingManager.getProgressPercentage()}%
+                    complete
+                  </p>
+                  <p>
+                    Completed steps: {preferences.completedSteps.length} of{" "}
+                    {steps.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <DialogFooter className="p-6 border-t border-gray-200 bg-gray-50">

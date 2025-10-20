@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useWorkflowStore } from "../store/workflowStore";
 import { OnboardingModal } from "./OnboardingModal";
+import { OnboardingManager } from "../utils/onboardingManager";
 import {
   Plus,
   Play,
@@ -36,10 +37,9 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
   const [editingWorkflowName, setEditingWorkflowName] = useState("");
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Show onboarding for first-time users
+  // Show onboarding based on preferences and workflow count
   useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem("hasSeenOnboarding");
-    if (!hasSeenOnboarding && workflows.length === 0) {
+    if (OnboardingManager.shouldShowOnboarding(workflows.length)) {
       setShowOnboarding(true);
     }
   }, [workflows.length]);
@@ -91,7 +91,11 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
 
   const handleOnboardingClose = () => {
     setShowOnboarding(false);
-    localStorage.setItem("hasSeenOnboarding", "true");
+  };
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    // OnboardingManager.markOnboardingCompleted() is called in the modal
   };
 
   const handleShowOnboarding = () => {
@@ -158,14 +162,43 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
             </p>
           </div>
           <div className="flex items-center space-x-3">
-            <button
-              onClick={handleShowOnboarding}
-              className="flex items-center space-x-2 px-4 py-3 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-all duration-200"
-              title="Show tutorial"
-            >
-              <HelpCircle className="w-4 h-4" />
-              <span className="font-medium hidden sm:inline">Help</span>
-            </button>
+            <div className="relative group">
+              <button
+                onClick={handleShowOnboarding}
+                className="flex items-center space-x-2 px-4 py-3 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-all duration-200"
+                title="Show tutorial"
+              >
+                <HelpCircle className="w-4 h-4" />
+                <span className="font-medium hidden sm:inline">Tutorial</span>
+                {OnboardingManager.getStatus().isNewVersionAvailable && (
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                )}
+              </button>
+
+              {/* Tooltip with onboarding status */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                <div className="text-center">
+                  <div className="font-medium">Tutorial Status</div>
+                  <div className="text-xs text-gray-300 mt-1">
+                    {OnboardingManager.getStatus().hasSeenOnboarding ? (
+                      <>
+                        Progress:{" "}
+                        {OnboardingManager.getStatus().progressPercentage}%
+                        {OnboardingManager.getStatus()
+                          .isNewVersionAvailable && (
+                          <div className="text-blue-300">
+                            New version available!
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      "Not started yet"
+                    )}
+                  </div>
+                </div>
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
             <button
               onClick={() => setShowCreateForm(true)}
               className="group flex items-center space-x-2 px-6 py-3 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md border border-gray-200"
@@ -416,6 +449,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
       <OnboardingModal
         isOpen={showOnboarding}
         onClose={handleOnboardingClose}
+        onComplete={handleOnboardingComplete}
       />
     </div>
   );

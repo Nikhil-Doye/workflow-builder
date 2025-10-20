@@ -13,6 +13,7 @@ import {
   Clock,
   Activity,
   GitBranch,
+  HelpCircle,
 } from "lucide-react";
 import {
   downloadWorkflow,
@@ -21,6 +22,8 @@ import {
 import { ApiKeysSettings } from "./ApiKeysSettings";
 import { DatabaseConnectionManager } from "./DatabaseConnectionManager";
 import { WorkflowScheduler } from "./WorkflowScheduler";
+import { OnboardingModal } from "./OnboardingModal";
+import { OnboardingManager } from "../utils/onboardingManager";
 import { Button } from "./ui/button";
 
 export const WorkflowToolbar: React.FC = () => {
@@ -39,6 +42,7 @@ export const WorkflowToolbar: React.FC = () => {
   const [showDatabaseManager, setShowDatabaseManager] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const handleSave = () => {
     if (currentWorkflow) {
@@ -158,6 +162,19 @@ export const WorkflowToolbar: React.FC = () => {
           Schedule
         </Button>
 
+        <Button
+          onClick={() => setShowOnboarding(true)}
+          variant="outline"
+          title="Show Tutorial"
+          className="relative"
+        >
+          <HelpCircle className="w-4 h-4 mr-2" />
+          Tutorial
+          {OnboardingManager.getStatus().isNewVersionAvailable && (
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full"></div>
+          )}
+        </Button>
+
         <div className="w-px h-6 bg-gray-300" />
 
         {/* Execution Mode Selector */}
@@ -260,6 +277,15 @@ export const WorkflowToolbar: React.FC = () => {
           isOpen={showScheduler}
           onClose={() => setShowScheduler(false)}
           workflowId={currentWorkflow?.id}
+        />
+      )}
+
+      {/* Onboarding Modal */}
+      {showOnboarding && (
+        <OnboardingModal
+          isOpen={showOnboarding}
+          onClose={() => setShowOnboarding(false)}
+          onComplete={() => setShowOnboarding(false)}
         />
       )}
     </div>
