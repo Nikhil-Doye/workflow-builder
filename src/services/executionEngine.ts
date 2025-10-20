@@ -1,3 +1,6 @@
+// Import variable substitution utilities
+import { substituteVariables, NodeOutput } from "../utils/variableSubstitution";
+
 export interface ExecutionContext {
   nodeId: string;
   nodeType: string;
@@ -150,6 +153,9 @@ export class ExecutionEngine {
     edges: any[],
     options: any
   ): ExecutionPlan {
+    // Create node label to ID mapping for variable substitution
+    const nodeLabelToId = this.createNodeLabelToIdMapping(nodes);
+
     const executionNodes: ExecutionContext[] = nodes.map((node) => ({
       nodeId: node.id,
       nodeType: node.data?.type || node.type,
@@ -169,6 +175,7 @@ export class ExecutionEngine {
         type: n.nodeType,
       })),
       edges: edges.map((e) => ({ from: e.source, to: e.target })),
+      nodeLabelToId: Array.from(nodeLabelToId.entries()),
     });
 
     const executionEdges = edges.map((edge) => ({
@@ -191,7 +198,7 @@ export class ExecutionEngine {
     const conditions = this.extractConditions(edges);
 
     return {
-      id: "",
+      id: `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       workflowId,
       nodes: executionNodes,
       edges: executionEdges,
@@ -650,6 +657,58 @@ export class ExecutionEngine {
     return path;
   }
 
+  // Create node label to ID mapping for variable substitution
+  private createNodeLabelToIdMapping(nodes: any[]): Map<string, string> {
+    const labelToId = new Map<string, string>();
+
+    nodes.forEach((node) => {
+      if (node.data && node.data.label) {
+        const label = node.data.label.trim();
+        if (label) {
+          labelToId.set(label, node.id);
+        }
+      }
+    });
+
+    return labelToId;
+  }
+
+  // Apply variable substitution to node configuration
+  private applyVariableSubstitution(
+    config: Record<string, any>,
+    plan: ExecutionPlan,
+    nodeLabelToId: Map<string, string>
+  ): Record<string, any> {
+    const substitutedConfig = { ...config };
+
+    // Create node outputs map for substitution
+    const nodeOutputs = new Map<string, NodeOutput>();
+    plan.nodes.forEach((node) => {
+      if (node.outputs.has("output")) {
+        nodeOutputs.set(node.nodeId, {
+          nodeId: node.nodeId,
+          output: node.outputs.get("output"),
+          data: node.outputs.get("output"),
+          status: node.status,
+        });
+      }
+    });
+
+    // Apply substitution to string values in config
+    Object.keys(substitutedConfig).forEach((key) => {
+      const value = substitutedConfig[key];
+      if (typeof value === "string" && value.includes("{{")) {
+        substitutedConfig[key] = substituteVariables(
+          value,
+          nodeOutputs,
+          nodeLabelToId
+        );
+      }
+    });
+
+    return substitutedConfig;
+  }
+
   // Execute a single node
   private async executeNode(
     context: ExecutionContext,
@@ -673,6 +732,22 @@ export class ExecutionEngine {
       console.log(`Executing node ${context.nodeId} (${context.nodeType}):`, {
         config: context.config,
         inputs: Array.from(context.inputs.entries()),
+      });
+
+      // Apply variable substitution to node configuration
+      const nodeLabelToId = (plan as any).nodeLabelToId || new Map();
+      const substitutedConfig = this.applyVariableSubstitution(
+        context.config,
+        plan,
+        nodeLabelToId
+      );
+
+      // Update context with substituted configuration
+      context.config = substitutedConfig;
+
+      console.log(`Applied variable substitution for node ${context.nodeId}:`, {
+        originalConfig: context.config,
+        substitutedConfig: substitutedConfig,
       });
 
       // Import the appropriate node processor

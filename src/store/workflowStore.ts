@@ -325,19 +325,40 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   },
 
   updateNode: (nodeId: string, data: Partial<NodeData>) => {
-    set((state) => ({
-      currentWorkflow: state.currentWorkflow
-        ? {
-            ...state.currentWorkflow,
-            nodes: state.currentWorkflow.nodes.map((node) =>
-              node.id === nodeId
-                ? { ...node, data: { ...node.data, ...data } }
-                : node
-            ),
-            updatedAt: new Date(),
-          }
-        : null,
-    }));
+    set((state) => {
+      if (!state.currentWorkflow) return state;
+
+      // Validate label uniqueness if label is being updated
+      if (data.label !== undefined) {
+        const otherNodes = state.currentWorkflow.nodes.filter(
+          (n) => n.id !== nodeId
+        );
+        const duplicateLabel = otherNodes.find(
+          (n) => n.data.label === data.label
+        );
+
+        if (duplicateLabel) {
+          console.warn(
+            `Node label "${data.label}" already exists. Please use a unique label.`
+          );
+          // You could throw an error here or show a toast notification
+          return state;
+        }
+      }
+
+      return {
+        ...state,
+        currentWorkflow: {
+          ...state.currentWorkflow,
+          nodes: state.currentWorkflow.nodes.map((node) =>
+            node.id === nodeId
+              ? { ...node, data: { ...node.data, ...data } }
+              : node
+          ),
+          updatedAt: new Date(),
+        },
+      };
+    });
   },
 
   updateNodePosition: (nodeId: string, position: { x: number; y: number }) => {

@@ -32,7 +32,7 @@
             "label": "Web Scraper",
             "status": "idle",
             "config": {
-              "url": "{{input-1.output}}",
+              "url": "{{Website URL.output}}",
               "formats": ["markdown", "html"],
               "maxLength": 2000
             },
@@ -50,7 +50,7 @@
             "label": "Content Analyzer",
             "status": "idle",
             "config": {
-              "prompt": "Analyze the following web content and provide a summary:\n\n{{scraper-1.output}}",
+              "prompt": "Analyze the following web content and provide a summary:\n\n{{Web Scraper.output}}",
               "model": "deepseek-chat",
               "temperature": 0.7,
               "maxTokens": 500

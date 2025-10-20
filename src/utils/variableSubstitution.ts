@@ -147,30 +147,50 @@ export const hasVariables = (template: string): boolean => {
  * Validate that all variables in a template have corresponding node outputs
  * @param template - String containing variables
  * @param nodeOutputs - Map of available node outputs
+ * @param nodeLabelToId - Optional mapping from node labels to node IDs
  * @returns Object with validation results
  */
 export const validateVariables = (
   template: string,
-  nodeOutputs: Map<string, NodeOutput>
+  nodeOutputs: Map<string, NodeOutput>,
+  nodeLabelToId?: Map<string, string>
 ): {
   isValid: boolean;
   missingNodes: string[];
   availableNodes: string[];
+  availableLabels: string[];
 } => {
   const variables = extractVariables(template);
   const missingNodes: string[] = [];
   const availableNodes = Array.from(nodeOutputs.keys());
+  const availableLabels = nodeLabelToId ? Array.from(nodeLabelToId.keys()) : [];
 
   variables.forEach((variable) => {
-    const nodeId = variable.includes(".") ? variable.split(".")[0] : variable;
-    if (!nodeOutputs.has(nodeId)) {
-      missingNodes.push(nodeId);
+    const nodeIdOrLabel = variable.includes(".")
+      ? variable.split(".")[0]
+      : variable;
+
+    // Check if it's a node ID
+    if (nodeOutputs.has(nodeIdOrLabel)) {
+      return; // Node ID exists
     }
+
+    // Check if it's a node label
+    if (nodeLabelToId && nodeLabelToId.has(nodeIdOrLabel)) {
+      const actualNodeId = nodeLabelToId.get(nodeIdOrLabel)!;
+      if (nodeOutputs.has(actualNodeId)) {
+        return; // Node label exists and maps to valid node
+      }
+    }
+
+    // Neither node ID nor label found
+    missingNodes.push(nodeIdOrLabel);
   });
 
   return {
     isValid: missingNodes.length === 0,
     missingNodes,
     availableNodes,
+    availableLabels,
   };
 };

@@ -71,6 +71,11 @@ export function validateWorkflowStructure(
     suggestions.push("Remove circular connections between nodes");
   }
 
+  // Check for unique node labels
+  const labelValidation = validateNodeLabels(workflow);
+  issues.push(...labelValidation.issues);
+  suggestions.push(...labelValidation.suggestions);
+
   return {
     isValid: issues.length === 0,
     issues,
@@ -338,6 +343,52 @@ function isValidVariableReference(
   const simpleOutputPattern = /^input\.output$/;
 
   return nodeOutputPattern.test(variable) || simpleOutputPattern.test(variable);
+}
+
+/**
+ * Validate that all node labels are unique within the workflow
+ */
+function validateNodeLabels(workflow: WorkflowStructure): {
+  issues: string[];
+  suggestions: string[];
+} {
+  const issues: string[] = [];
+  const suggestions: string[] = [];
+  const labelCounts = new Map<string, number>();
+  const duplicateLabels: string[] = [];
+
+  // Count occurrences of each label
+  workflow.nodes.forEach((node, index) => {
+    const label = node.label || `Node ${index + 1}`;
+    const count = labelCounts.get(label) || 0;
+    labelCounts.set(label, count + 1);
+
+    if (count > 0) {
+      duplicateLabels.push(label);
+    }
+  });
+
+  // Report duplicate labels
+  if (duplicateLabels.length > 0) {
+    const uniqueDuplicates = [...new Set(duplicateLabels)];
+    issues.push(`Duplicate node labels found: ${uniqueDuplicates.join(", ")}`);
+    suggestions.push(
+      "Make sure each node has a unique label for variable substitution to work properly"
+    );
+  }
+
+  // Check for empty labels
+  const emptyLabels = workflow.nodes.filter(
+    (node, index) => !node.label || node.label.trim() === ""
+  );
+  if (emptyLabels.length > 0) {
+    issues.push(`${emptyLabels.length} nodes have empty labels`);
+    suggestions.push(
+      "Give each node a descriptive label for better variable substitution"
+    );
+  }
+
+  return { issues, suggestions };
 }
 
 /**

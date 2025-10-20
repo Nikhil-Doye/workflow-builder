@@ -10,7 +10,7 @@ An open-source, visual workflow builder for creating AI-powered agent workflows,
 - **Real-time Connection**: Connect nodes with visual edges
 - **Node Palette**: Easy access to all available node types
 - **Responsive Design**: Works on desktop and tablet devices
-- **Variable Substitution**: Use `{{nodeId.output}}` to pass data between nodes
+- **Variable Substitution**: Use `{{nodeId.output}}` or `{{nodelabel.output}}` to pass data between nodes
 
 ### AI-Powered Node Types
 
@@ -137,7 +137,7 @@ An open-source, visual workflow builder for creating AI-powered agent workflows,
 
    - Click on any node to open its configuration panel
    - Set parameters like URLs, prompts, model settings, etc.
-   - Use variable substitution: `{{nodeId.output}}` to pass data between nodes
+   - Use variable substitution: `{{nodeId.output}}` or `{{nodelabel.output}}` to pass data between nodes
 
 3. **Test Your Workflow**
 
@@ -254,6 +254,38 @@ The application requires API keys for full functionality:
 ### Node Types and Parameters
 
 Each node type supports specific configuration options:
+
+#### Variable Substitution with Node Labels
+
+The workflow builder now supports intuitive variable substitution using node labels:
+
+**Traditional Method (Node IDs):**
+
+```
+{{node-1234567890.output}}
+```
+
+**New Method (Node Labels):**
+
+```
+{{Website URL.output}}
+{{Web Scraper.output}}
+{{Content Analyzer.output}}
+```
+
+**Benefits:**
+
+- **More Intuitive**: Use descriptive names instead of cryptic IDs
+- **Easier to Read**: Workflow configurations are self-documenting
+- **Better UX**: No need to remember or look up node IDs
+- **Backward Compatible**: Both methods work together
+
+**Requirements:**
+
+- Each node must have a unique label within the workflow
+- Labels are case-sensitive
+- Empty labels are not allowed
+- The system validates label uniqueness automatically
 
 #### Web Scraping Node (Firecrawl AI)
 
@@ -379,7 +411,7 @@ We welcome contributions! Here's how you can help:
 - Verify all required node parameters are configured
 - Check the execution panel for detailed error messages
 - Ensure all nodes are properly connected in sequence
-- Check that variable substitutions are correct (e.g., `{{nodeId.output}}`)
+- Check that variable substitutions are correct (e.g., `{{nodeId.output}}` or `{{nodelabel.output}}`)
 
 **Web Scraping Issues**
 
