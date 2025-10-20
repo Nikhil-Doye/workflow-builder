@@ -16,6 +16,66 @@ import { executionEngine, ExecutionPlan } from "../services/executionEngine";
 // localStorage key for workflows
 const WORKFLOWS_STORAGE_KEY = "agent-workflow-builder-workflows";
 
+// Utility functions for consistent ID generation and mapping
+const generateNodeId = (): string => uuidv4();
+const generateEdgeId = (): string => uuidv4();
+
+// Create a mapping from deterministic IDs to UUIDs
+const createIdMapping = (nodeCount: number): Map<string, string> => {
+  const mapping = new Map<string, string>();
+  for (let i = 0; i < nodeCount; i++) {
+    mapping.set(`node-${i}`, generateNodeId());
+  }
+  return mapping;
+};
+
+// Migrate deterministic IDs to UUIDs in a workflow
+const migrateWorkflowIds = (workflow: Workflow): Workflow => {
+  // Check if workflow needs migration (contains deterministic IDs)
+  const hasDeterministicIds = workflow.nodes.some(
+    (node) => node.id.startsWith("node-") && /^node-\d+$/.test(node.id)
+  );
+
+  if (!hasDeterministicIds) {
+    return workflow; // Already migrated
+  }
+
+  // Create ID mapping
+  const idMapping = createIdMapping(workflow.nodes.length);
+
+  // Migrate nodes
+  const migratedNodes = workflow.nodes.map((node) => {
+    const newId = idMapping.get(node.id) || generateNodeId();
+    return {
+      ...node,
+      id: newId,
+      data: {
+        ...node.data,
+        id: newId,
+      },
+    };
+  });
+
+  // Migrate edges
+  const migratedEdges = workflow.edges.map((edge) => {
+    const newSourceId = idMapping.get(edge.source) || edge.source;
+    const newTargetId = idMapping.get(edge.target) || edge.target;
+    return {
+      ...edge,
+      id: generateEdgeId(),
+      source: newSourceId,
+      target: newTargetId,
+    };
+  });
+
+  return {
+    ...workflow,
+    nodes: migratedNodes,
+    edges: migratedEdges,
+    updatedAt: new Date(),
+  };
+};
+
 // Helper functions for localStorage operations
 const saveWorkflowsToStorage = (workflows: Workflow[]): boolean => {
   try {
@@ -36,12 +96,16 @@ const loadWorkflowsFromStorage = (): Workflow[] => {
     const stored = localStorage.getItem(WORKFLOWS_STORAGE_KEY);
     if (stored) {
       const workflows = JSON.parse(stored);
-      // Convert date strings back to Date objects
-      return workflows.map((workflow: any) => ({
-        ...workflow,
-        createdAt: new Date(workflow.createdAt),
-        updatedAt: new Date(workflow.updatedAt),
-      }));
+      // Convert date strings back to Date objects and migrate IDs
+      return workflows.map((workflow: any) => {
+        const convertedWorkflow = {
+          ...workflow,
+          createdAt: new Date(workflow.createdAt),
+          updatedAt: new Date(workflow.updatedAt),
+        };
+        // Apply migration for deterministic IDs
+        return migrateWorkflowIds(convertedWorkflow);
+      });
     }
   } catch (error) {
     console.error("Failed to load workflows from localStorage:", error);
@@ -298,12 +362,13 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     const { currentWorkflow } = get();
     if (!currentWorkflow) return;
 
+    const nodeId = generateNodeId();
     const newNode: WorkflowNode = {
-      id: uuidv4(),
+      id: nodeId,
       type,
       position,
       data: {
-        id: uuidv4(),
+        id: nodeId,
         type: type as any,
         label: `${type} Node`,
         status: "idle",
@@ -445,7 +510,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     if (!currentWorkflow) return;
 
     const newEdge: WorkflowEdge = {
-      id: uuidv4(),
+      id: generateEdgeId(),
       source,
       target,
       sourceHandle,
@@ -716,32 +781,40 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       // Create a new workflow with the generated structure
       const newWorkflow = createEmptyWorkflow(parsedIntent.intent);
 
-      // Convert WorkflowStructure to Workflow format
+      // Convert WorkflowStructure to Workflow format with proper UUIDs
+      const nodeIdMapping = createIdMapping(workflowStructure.nodes.length);
       const nodes: WorkflowNode[] = workflowStructure.nodes.map(
-        (node, index) => ({
-          id: `node-${index}`,
-          type: node.type,
-          position: node.position || { x: 100 + index * 200, y: 100 },
-          data: {
-            id: `node-${index}`,
-            type: node.type as any,
-            label: node.label,
-            status: "idle" as const,
-            config: node.config,
-            inputs: [],
-            outputs: [],
-          },
-        })
+        (node, index) => {
+          const nodeId = nodeIdMapping.get(`node-${index}`) || generateNodeId();
+          return {
+            id: nodeId,
+            type: node.type,
+            position: node.position || { x: 100 + index * 200, y: 100 },
+            data: {
+              id: nodeId,
+              type: node.type as any,
+              label: node.label,
+              status: "idle" as const,
+              config: node.config,
+              inputs: [],
+              outputs: [],
+            },
+          };
+        }
       );
 
       const edges: WorkflowEdge[] = workflowStructure.edges.map(
-        (edge, index) => ({
-          id: `edge-${index}`,
-          source: edge.source,
-          target: edge.target,
-          sourceHandle: edge.sourceHandle,
-          targetHandle: edge.targetHandle,
-        })
+        (edge, index) => {
+          const sourceId = nodeIdMapping.get(edge.source) || edge.source;
+          const targetId = nodeIdMapping.get(edge.target) || edge.target;
+          return {
+            id: generateEdgeId(),
+            source: sourceId,
+            target: targetId,
+            sourceHandle: edge.sourceHandle,
+            targetHandle: edge.targetHandle,
+          };
+        }
       );
 
       const generatedWorkflow: Workflow = {
