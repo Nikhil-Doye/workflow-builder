@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from "uuid";
 // Removed unused imports to clean up warnings
 import { agentManager } from "../services/agents/AgentManager";
 import { executionEngine, ExecutionPlan } from "../services/executionEngine";
+import { LabelDependencyManager } from "../utils/labelDependencyManager";
 
 // localStorage key for workflows
 const WORKFLOWS_STORAGE_KEY = "agent-workflow-builder-workflows";
@@ -173,6 +174,11 @@ interface WorkflowStore {
     position: { x: number; y: number }
   ) => void;
   updateNodeData: (nodeId: string, data: Partial<NodeData>) => void;
+  updateNodeLabelWithDependencies: (
+    nodeId: string,
+    newLabel: string,
+    updateReferences: boolean
+  ) => void;
   deleteNode: (nodeId: string) => void;
   clearAllNodes: () => void;
   selectNode: (nodeId: string | null) => void;
@@ -423,6 +429,68 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
           updatedAt: new Date(),
         },
       };
+    });
+  },
+
+  updateNodeLabelWithDependencies: (
+    nodeId: string,
+    newLabel: string,
+    updateReferences: boolean
+  ) => {
+    set((state) => {
+      if (!state.currentWorkflow) return state;
+
+      const targetNode = state.currentWorkflow.nodes.find(
+        (n) => n.id === nodeId
+      );
+      if (!targetNode) return state;
+
+      const oldLabel = targetNode.data.label || nodeId;
+
+      // Validate label uniqueness
+      const otherNodes = state.currentWorkflow.nodes.filter(
+        (n) => n.id !== nodeId
+      );
+      const duplicateLabel = otherNodes.find((n) => n.data.label === newLabel);
+
+      if (duplicateLabel) {
+        console.warn(
+          `Node label "${newLabel}" already exists. Please use a unique label.`
+        );
+        return state;
+      }
+
+      if (updateReferences) {
+        // Update the workflow with all references updated
+        const updatedWorkflow = LabelDependencyManager.updateLabelReferences(
+          state.currentWorkflow,
+          nodeId,
+          oldLabel,
+          newLabel
+        );
+
+        return {
+          ...state,
+          currentWorkflow: {
+            ...updatedWorkflow,
+            updatedAt: new Date(),
+          },
+        };
+      } else {
+        // Just update the label without fixing references
+        return {
+          ...state,
+          currentWorkflow: {
+            ...state.currentWorkflow,
+            nodes: state.currentWorkflow.nodes.map((node) =>
+              node.id === nodeId
+                ? { ...node, data: { ...node.data, label: newLabel } }
+                : node
+            ),
+            updatedAt: new Date(),
+          },
+        };
+      }
     });
   },
 

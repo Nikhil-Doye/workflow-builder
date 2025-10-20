@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NodeData } from "../types";
+import { NodeData, Workflow } from "../types";
 import { useWorkflowStore } from "../store/workflowStore";
 import { X, Settings, Sparkles } from "lucide-react";
 import { promptOptimizer } from "../services/promptOptimizer";
@@ -17,6 +17,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { DatabaseNodeConfiguration } from "./DatabaseNodeConfiguration";
+import { LabelChangeDialog } from "./LabelChangeDialog";
+import { LabelDependencyManager } from "../utils/labelDependencyManager";
 
 interface NodeConfigurationProps {
   nodeId: string;
@@ -310,10 +312,15 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
   data,
   onClose,
 }) => {
-  const { updateNode, currentWorkflow } = useWorkflowStore();
+  const { updateNode, updateNodeLabelWithDependencies, currentWorkflow } =
+    useWorkflowStore();
   const config = nodeTypeConfigs[data.type];
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationResult, setOptimizationResult] = useState<string>("");
+
+  // State for label change dialog
+  const [showLabelDialog, setShowLabelDialog] = useState(false);
+  const [pendingLabel, setPendingLabel] = useState<string>("");
 
   // Get the latest node data from the store to ensure we have the most up-to-date config
   const currentNode = currentWorkflow?.nodes.find((node) => node.id === nodeId);
@@ -348,7 +355,49 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
   }
 
   const handleLabelChange = (label: string) => {
+    const currentLabel = currentData.label || nodeId;
+
+    // If the label hasn't changed, do nothing
+    if (label === currentLabel) {
+      return;
+    }
+
+    // Check if there are any dependencies on this label
+    if (currentWorkflow) {
+      const dependencies = LabelDependencyManager.findLabelDependencies(
+        currentWorkflow,
+        nodeId,
+        currentLabel
+      );
+
+      if (dependencies.length > 0) {
+        // Show dialog to handle dependencies
+        setPendingLabel(label);
+        setShowLabelDialog(true);
+        return;
+      }
+    }
+
+    // No dependencies, safe to update directly
     updateNode(nodeId, { label });
+  };
+
+  const handleLabelChangeConfirm = (
+    newLabel: string,
+    updateReferences: boolean
+  ) => {
+    if (!currentWorkflow) return;
+
+    // Use the new store method that handles dependencies
+    updateNodeLabelWithDependencies(nodeId, newLabel, updateReferences);
+
+    setShowLabelDialog(false);
+    setPendingLabel("");
+  };
+
+  const handleLabelChangeCancel = () => {
+    setShowLabelDialog(false);
+    setPendingLabel("");
   };
 
   const handleOptimizePrompt = async () => {
@@ -695,6 +744,19 @@ Return only the optimized prompt:`,
           </Button>
         </div>
       </Card>
+
+      {/* Label Change Dialog */}
+      {showLabelDialog && currentWorkflow && (
+        <LabelChangeDialog
+          isOpen={showLabelDialog}
+          onClose={handleLabelChangeCancel}
+          onConfirm={handleLabelChangeConfirm}
+          nodeId={nodeId}
+          oldLabel={currentData.label || nodeId}
+          newLabel={pendingLabel}
+          workflow={currentWorkflow}
+        />
+      )}
     </div>
   );
 };
