@@ -1,10 +1,10 @@
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import ReactFlow, {
   Node,
   Edge,
   Connection,
-  useNodesState,
-  useEdgesState,
+  NodeChange,
+  EdgeChange,
   Controls,
   Background,
   BackgroundVariant,
@@ -66,18 +66,10 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     selectedNodeId,
     panelStates,
     togglePanel,
+    updateNodePosition,
   } = useWorkflowStore();
-
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
-  // Sync local state with store when currentWorkflow changes
-  useEffect(() => {
-    if (currentWorkflow) {
-      setNodes(currentWorkflow.nodes);
-      setEdges(currentWorkflow.edges);
-    }
-  }, [currentWorkflow, setNodes, setEdges]);
+  const nodes = currentWorkflow?.nodes || [];
+  const edges = currentWorkflow?.edges || [];
   const [showConfig, setShowConfig] = useState(false);
   const [showCopilot, setShowCopilot] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -87,27 +79,53 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
   const onConnect = useCallback(
     (params: Connection) => {
       if (params.source && params.target) {
-        // Add edge to workflow store
         addEdge(
           params.source,
           params.target,
           params.sourceHandle || undefined,
           params.targetHandle || undefined
         );
-
-        // Add edge to local state
-        const newEdge = {
-          id: `edge-${Date.now()}`,
-          source: params.source,
-          target: params.target,
-          sourceHandle: params.sourceHandle,
-          targetHandle: params.targetHandle,
-        };
-
-        setEdges((eds) => [...eds, newEdge]);
       }
     },
-    [addEdge, setEdges]
+    [addEdge]
+  );
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      changes.forEach((change) => {
+        switch (change.type) {
+          case "position":
+            if (change.id && change.position) {
+              updateNodePosition(change.id, change.position);
+            }
+            break;
+          case "select":
+            if (change.id) {
+              selectNode(change.selected ? change.id : null);
+            }
+            break;
+          case "remove":
+            if (change.id) {
+              deleteNode(change.id);
+            }
+            break;
+          default:
+            break;
+        }
+      });
+    },
+    [updateNodePosition, selectNode, deleteNode]
+  );
+
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      changes.forEach((change) => {
+        if (change.type === "remove" && change.id) {
+          deleteEdge(change.id);
+        }
+      });
+    },
+    [deleteEdge]
   );
 
   const onNodeClick = useCallback(
@@ -157,51 +175,23 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
         y: event.clientY - reactFlowBounds.top,
       });
 
-      // Add node to the workflow store
       addNode(type, position);
-
-      // Create a new node for the local state
-      const newNode = {
-        id: `node-${Date.now()}`,
-        type,
-        position,
-        data: {
-          id: `node-${Date.now()}`,
-          type: type as any,
-          label: `${type} Node`,
-          status: "idle" as const,
-          config: {},
-          inputs: [],
-          outputs: [],
-        },
-      };
-
-      // Add to local state
-      setNodes((nds) => [...nds, newNode]);
     },
-    [reactFlowInstance, addNode, setNodes]
+    [reactFlowInstance, addNode]
   );
 
   const onNodesDelete = useCallback(
     (nodesToDelete: Node[]) => {
       nodesToDelete.forEach((node) => deleteNode(node.id));
-      // Update local state
-      setNodes((nds) =>
-        nds.filter((node) => !nodesToDelete.some((n) => n.id === node.id))
-      );
     },
-    [deleteNode, setNodes]
+    [deleteNode]
   );
 
   const onEdgesDelete = useCallback(
     (edgesToDelete: Edge[]) => {
       edgesToDelete.forEach((edge) => deleteEdge(edge.id));
-      // Update local state
-      setEdges((eds) =>
-        eds.filter((edge) => !edgesToDelete.some((e) => e.id === edge.id))
-      );
     },
-    [deleteEdge, setEdges]
+    [deleteEdge]
   );
 
   const onInit = useCallback((instance: ReactFlowInstance) => {

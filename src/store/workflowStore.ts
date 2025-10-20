@@ -104,6 +104,11 @@ interface WorkflowStore {
   // Node management
   addNode: (type: string, position: { x: number; y: number }) => void;
   updateNode: (nodeId: string, data: Partial<NodeData>) => void;
+  updateNodePosition: (
+    nodeId: string,
+    position: { x: number; y: number }
+  ) => void;
+  updateNodeData: (nodeId: string, data: Partial<NodeData>) => void;
   deleteNode: (nodeId: string) => void;
   clearAllNodes: () => void;
   selectNode: (nodeId: string | null) => void;
@@ -320,6 +325,36 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   },
 
   updateNode: (nodeId: string, data: Partial<NodeData>) => {
+    set((state) => ({
+      currentWorkflow: state.currentWorkflow
+        ? {
+            ...state.currentWorkflow,
+            nodes: state.currentWorkflow.nodes.map((node) =>
+              node.id === nodeId
+                ? { ...node, data: { ...node.data, ...data } }
+                : node
+            ),
+            updatedAt: new Date(),
+          }
+        : null,
+    }));
+  },
+
+  updateNodePosition: (nodeId: string, position: { x: number; y: number }) => {
+    set((state) => ({
+      currentWorkflow: state.currentWorkflow
+        ? {
+            ...state.currentWorkflow,
+            nodes: state.currentWorkflow.nodes.map((node) =>
+              node.id === nodeId ? { ...node, position } : node
+            ),
+            updatedAt: new Date(),
+          }
+        : null,
+    }));
+  },
+
+  updateNodeData: (nodeId: string, data: Partial<NodeData>) => {
     set((state) => ({
       currentWorkflow: state.currentWorkflow
         ? {
