@@ -1,185 +1,163 @@
 import { copilotService } from "../../services/copilotService";
 
-// Mock dependencies
-jest.mock("../../services/openaiService", () => ({
-  callOpenAI: jest.fn(),
-}));
-
-jest.mock("../../services/agents/AgentManager", () => ({
-  agentManager: {
-    generateWorkflowFromDescription: jest.fn(),
+// Mock the centralized service
+jest.mock("../../services/naturalLanguageToWorkflowService", () => ({
+  naturalLanguageToWorkflowService: {
+    parseNaturalLanguage: jest.fn(),
+    analyzeMixedIntent: jest.fn(),
+    generateMixedWorkflow: jest.fn(),
+    validateWorkflow: jest.fn(),
+    validateMixedWorkflow: jest.fn(),
+    getImprovementSuggestions: jest.fn(),
+    generateContextualSuggestions: jest.fn(),
+    learnFromModifications: jest.fn(),
+    clearCache: jest.fn(),
+    getCacheStats: jest.fn(),
   },
 }));
 
-jest.mock("../../utils/workflowGenerator", () => ({
-  generateWorkflowStructure: jest.fn(),
-}));
-
-jest.mock("../../utils/workflowValidator", () => ({
-  validateWorkflowStructure: jest.fn(),
-}));
-
 describe("CopilotService", () => {
-  let mockCallOpenAI: jest.MockedFunction<any>;
-  let mockAgentManager: any;
-  let mockGenerateWorkflowStructure: jest.MockedFunction<any>;
-  let mockValidateWorkflowStructure: jest.MockedFunction<any>;
+  let mockNaturalLanguageToWorkflowService: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    mockCallOpenAI = require("../../services/openaiService").callOpenAI;
-    mockAgentManager =
-      require("../../services/agents/AgentManager").agentManager;
-    mockGenerateWorkflowStructure =
-      require("../../utils/workflowGenerator").generateWorkflowStructure;
-    mockValidateWorkflowStructure =
-      require("../../utils/workflowValidator").validateWorkflowStructure;
+    mockNaturalLanguageToWorkflowService =
+      require("../../services/naturalLanguageToWorkflowService").naturalLanguageToWorkflowService;
   });
 
-  describe("parseUserIntent", () => {
+  describe("parseNaturalLanguage", () => {
     it("should parse user intent successfully", async () => {
-      const mockResponse = {
-        content: JSON.stringify({
-          intent: "WEB_SCRAPING",
-          entities: {
-            urls: ["https://example.com"],
-            dataTypes: ["html"],
-          },
-          workflowStructure: {
-            nodes: [
-              { type: "dataInput", label: "URL Input" },
-              { type: "webScraping", label: "Web Scraper" },
-            ],
-            edges: [{ source: "node-0", target: "node-1" }],
-          },
-        }),
+      const mockResult = {
+        intent: "WEB_SCRAPING",
+        confidence: 0.9,
+        entities: {
+          urls: ["https://example.com"],
+          dataTypes: ["html"],
+        },
+        workflowStructure: {
+          nodes: [
+            { type: "dataInput", label: "URL Input" },
+            { type: "webScraping", label: "Web Scraper" },
+          ],
+          edges: [{ source: "node-0", target: "node-1" }],
+        },
+        reasoning: "Web scraping workflow detected",
       };
 
-      mockCallOpenAI.mockResolvedValue(mockResponse);
+      mockNaturalLanguageToWorkflowService.parseNaturalLanguage.mockResolvedValue(
+        mockResult
+      );
 
-      const result = await copilotService.parseUserIntent(
+      const result = await copilotService.parseNaturalLanguage(
         "Scrape data from https://example.com"
       );
 
       expect(result.intent).toBe("WEB_SCRAPING");
       expect(result.entities.urls).toContain("https://example.com");
       expect(result.workflowStructure).toBeDefined();
-      expect(mockCallOpenAI).toHaveBeenCalledWith(
-        expect.stringContaining("Scrape data from https://example.com"),
-        expect.any(Object)
-      );
+      expect(
+        mockNaturalLanguageToWorkflowService.parseNaturalLanguage
+      ).toHaveBeenCalledWith("Scrape data from https://example.com");
     });
 
     it("should handle parsing errors gracefully", async () => {
-      mockCallOpenAI.mockRejectedValue(new Error("API Error"));
+      mockNaturalLanguageToWorkflowService.parseNaturalLanguage.mockRejectedValue(
+        new Error("API Error")
+      );
 
       await expect(
-        copilotService.parseUserIntent("Invalid input")
+        copilotService.parseNaturalLanguage("Invalid input")
       ).rejects.toThrow("API Error");
     });
 
-    it("should use cache for repeated requests", async () => {
-      const mockResponse = {
-        content: JSON.stringify({
-          intent: "DATA_PROCESSING",
-          entities: {},
-          workflowStructure: null,
-        }),
+    it("should delegate to centralized service", async () => {
+      const mockResult = {
+        intent: "DATA_PROCESSING",
+        confidence: 0.8,
+        entities: {},
+        workflowStructure: null,
+        reasoning: "Data processing workflow",
       };
 
-      mockCallOpenAI.mockResolvedValue(mockResponse);
+      mockNaturalLanguageToWorkflowService.parseNaturalLanguage.mockResolvedValue(
+        mockResult
+      );
 
-      // First call
-      await copilotService.parseUserIntent("Process some data");
-      expect(mockCallOpenAI).toHaveBeenCalledTimes(1);
+      await copilotService.parseNaturalLanguage("Process some data");
 
-      // Second call should use cache
-      await copilotService.parseUserIntent("Process some data");
-      expect(mockCallOpenAI).toHaveBeenCalledTimes(1);
+      expect(
+        mockNaturalLanguageToWorkflowService.parseNaturalLanguage
+      ).toHaveBeenCalledWith("Process some data");
     });
   });
 
-  describe("generateWorkflowSuggestions", () => {
-    it("should generate workflow suggestions", async () => {
-      const mockResponse = {
-        content: JSON.stringify({
-          suggestions: [
-            "Add a data validation step",
-            "Include error handling",
-            "Add data transformation",
-          ],
-        }),
-      };
+  describe("generateContextualSuggestions", () => {
+    it("should generate contextual suggestions", async () => {
+      const mockSuggestions = [
+        "Add a data validation step",
+        "Include error handling",
+        "Add data transformation",
+      ];
 
-      mockCallOpenAI.mockResolvedValue(mockResponse);
+      mockNaturalLanguageToWorkflowService.generateContextualSuggestions.mockResolvedValue(
+        mockSuggestions
+      );
 
-      const suggestions = await copilotService.generateWorkflowSuggestions(
-        "web scraping workflow",
-        { nodes: [], edges: [] }
+      const suggestions = await copilotService.generateContextualSuggestions(
+        { nodes: [], edges: [] },
+        "web scraping workflow"
       );
 
       expect(suggestions).toHaveLength(3);
       expect(suggestions[0]).toBe("Add a data validation step");
-      expect(mockCallOpenAI).toHaveBeenCalledWith(
-        expect.stringContaining("web scraping workflow"),
-        expect.any(Object)
-      );
+      expect(
+        mockNaturalLanguageToWorkflowService.generateContextualSuggestions
+      ).toHaveBeenCalledWith({ nodes: [], edges: [] }, "web scraping workflow");
     });
 
     it("should handle empty suggestions", async () => {
-      const mockResponse = {
-        content: JSON.stringify({
-          suggestions: [],
-        }),
-      };
+      mockNaturalLanguageToWorkflowService.generateContextualSuggestions.mockResolvedValue(
+        []
+      );
 
-      mockCallOpenAI.mockResolvedValue(mockResponse);
-
-      const suggestions = await copilotService.generateWorkflowSuggestions(
-        "simple workflow",
-        { nodes: [], edges: [] }
+      const suggestions = await copilotService.generateContextualSuggestions(
+        { nodes: [], edges: [] },
+        "simple workflow"
       );
 
       expect(suggestions).toHaveLength(0);
     });
   });
 
-  describe("generateWorkflowFromDescription", () => {
-    it("should generate workflow from description", async () => {
-      const mockWorkflowStructure = {
-        nodes: [
-          { type: "dataInput", label: "Input" },
-          { type: "llmTask", label: "Processor" },
-        ],
-        edges: [{ source: "node-0", target: "node-1" }],
+  describe("analyzeMixedIntent", () => {
+    it("should analyze mixed intent", async () => {
+      const mockAnalysis = {
+        intent: "MIXED",
+        confidence: 0.8,
+        reasoning: "Mixed workflow detected",
+        subIntents: ["WEB_SCRAPING", "AI_ANALYSIS"],
+        subConfidences: { WEB_SCRAPING: 0.9, AI_ANALYSIS: 0.7 },
+        complexity: {
+          level: "high",
+          score: 0.8,
+          patterns: ["mixed", "complex"],
+          estimatedNodes: 5,
+        },
       };
 
-      mockAgentManager.generateWorkflowFromDescription.mockResolvedValue({
-        intent: "AI_ANALYSIS",
-        entities: {},
-        workflowStructure: mockWorkflowStructure,
-      });
-
-      const result = await copilotService.generateWorkflowFromDescription(
-        "Analyze text data with AI"
+      mockNaturalLanguageToWorkflowService.analyzeMixedIntent.mockResolvedValue(
+        mockAnalysis
       );
 
-      expect(result.intent).toBe("AI_ANALYSIS");
-      expect(result.workflowStructure).toEqual(mockWorkflowStructure);
+      const result = await copilotService.analyzeMixedIntent(
+        "Scrape data and analyze with AI"
+      );
+
+      expect(result.intent).toBe("MIXED");
+      expect(result.complexity.level).toBe("high");
       expect(
-        mockAgentManager.generateWorkflowFromDescription
-      ).toHaveBeenCalledWith("Analyze text data with AI");
-    });
-
-    it("should handle generation errors", async () => {
-      mockAgentManager.generateWorkflowFromDescription.mockRejectedValue(
-        new Error("Generation failed")
-      );
-
-      await expect(
-        copilotService.generateWorkflowFromDescription("Invalid request")
-      ).rejects.toThrow("Generation failed");
+        mockNaturalLanguageToWorkflowService.analyzeMixedIntent
+      ).toHaveBeenCalledWith("Scrape data and analyze with AI");
     });
   });
 
@@ -193,17 +171,26 @@ describe("CopilotService", () => {
         edges: [{ source: "node-0", target: "node-1" }],
       };
 
-      mockValidateWorkflowStructure.mockReturnValue({
+      const mockValidation = {
         isValid: true,
         issues: [],
         suggestions: [],
-      });
+      };
 
-      const result = await copilotService.validateWorkflow(mockWorkflow);
+      mockNaturalLanguageToWorkflowService.validateWorkflow.mockReturnValue(
+        mockValidation
+      );
+
+      const result = copilotService.validateWorkflow(
+        mockWorkflow,
+        "test input"
+      );
 
       expect(result.isValid).toBe(true);
       expect(result.issues).toHaveLength(0);
-      expect(mockValidateWorkflowStructure).toHaveBeenCalledWith(mockWorkflow);
+      expect(
+        mockNaturalLanguageToWorkflowService.validateWorkflow
+      ).toHaveBeenCalledWith(mockWorkflow, "test input");
     });
 
     it("should identify validation issues", async () => {
@@ -215,13 +202,20 @@ describe("CopilotService", () => {
         edges: [],
       };
 
-      mockValidateWorkflowStructure.mockReturnValue({
+      const mockValidation = {
         isValid: false,
         issues: ["No processing nodes found"],
         suggestions: ["Add a processing node"],
-      });
+      };
 
-      const result = await copilotService.validateWorkflow(mockWorkflow);
+      mockNaturalLanguageToWorkflowService.validateWorkflow.mockReturnValue(
+        mockValidation
+      );
+
+      const result = copilotService.validateWorkflow(
+        mockWorkflow,
+        "test input"
+      );
 
       expect(result.isValid).toBe(false);
       expect(result.issues).toContain("No processing nodes found");
@@ -229,103 +223,73 @@ describe("CopilotService", () => {
     });
   });
 
-  describe("optimizeWorkflow", () => {
-    it("should optimize workflow performance", async () => {
-      const mockResponse = {
-        content: JSON.stringify({
-          optimizations: [
-            "Add parallel processing for independent nodes",
-            "Implement caching for repeated operations",
-            "Optimize data flow between nodes",
-          ],
-        }),
-      };
+  describe("getImprovementSuggestions", () => {
+    it("should get improvement suggestions", async () => {
+      const mockSuggestions = [
+        "Add parallel processing for independent nodes",
+        "Implement caching for repeated operations",
+        "Optimize data flow between nodes",
+      ];
 
-      mockCallOpenAI.mockResolvedValue(mockResponse);
+      mockNaturalLanguageToWorkflowService.getImprovementSuggestions.mockReturnValue(
+        mockSuggestions
+      );
 
-      const optimizations = await copilotService.optimizeWorkflow({
+      const suggestions = copilotService.getImprovementSuggestions({
         nodes: [],
         edges: [],
       });
 
-      expect(optimizations).toHaveLength(3);
-      expect(optimizations[0]).toBe(
+      expect(suggestions).toHaveLength(3);
+      expect(suggestions[0]).toBe(
         "Add parallel processing for independent nodes"
       );
+      expect(
+        mockNaturalLanguageToWorkflowService.getImprovementSuggestions
+      ).toHaveBeenCalledWith({
+        nodes: [],
+        edges: [],
+      });
     });
   });
 
-  describe("getCopilotSuggestions", () => {
-    it("should get contextual suggestions", async () => {
-      const mockResponse = {
-        content: JSON.stringify({
-          suggestions: [
-            "Consider adding error handling",
-            "Add data validation step",
-            "Include progress indicators",
-          ],
-        }),
-      };
-
-      mockCallOpenAI.mockResolvedValue(mockResponse);
-
-      const suggestions = await copilotService.getCopilotSuggestions(
-        "web scraping workflow"
-      );
-
-      expect(suggestions).toHaveLength(3);
-      expect(suggestions[0]).toBe("Consider adding error handling");
+  describe("cache operations", () => {
+    it("should clear cache", () => {
+      copilotService.clearCache();
+      expect(
+        mockNaturalLanguageToWorkflowService.clearCache
+      ).toHaveBeenCalled();
     });
 
-    it("should handle context-specific suggestions", async () => {
-      const mockResponse = {
-        content: JSON.stringify({
-          suggestions: [
-            "Add database connection for data storage",
-            "Include data transformation steps",
-            "Add output formatting options",
-          ],
-        }),
-      };
-
-      mockCallOpenAI.mockResolvedValue(mockResponse);
-
-      const suggestions = await copilotService.getCopilotSuggestions(
-        "data processing workflow with database"
+    it("should get cache stats", () => {
+      const mockStats = { size: 5, hitRate: 0.8 };
+      mockNaturalLanguageToWorkflowService.getCacheStats.mockReturnValue(
+        mockStats
       );
 
-      expect(suggestions).toHaveLength(3);
-      expect(suggestions[0]).toBe("Add database connection for data storage");
+      const stats = copilotService.getCacheStats();
+      expect(stats).toEqual(mockStats);
+      expect(
+        mockNaturalLanguageToWorkflowService.getCacheStats
+      ).toHaveBeenCalled();
     });
   });
 
-  describe("Error Handling", () => {
-    it("should handle malformed JSON responses", async () => {
-      mockCallOpenAI.mockResolvedValue({
-        content: "Invalid JSON response",
-      });
+  describe("learnFromModifications", () => {
+    it("should learn from modifications", () => {
+      const originalWorkflow = { nodes: [], edges: [] };
+      const modifiedWorkflow = { nodes: [{ type: "dataInput" }], edges: [] };
+      const feedback = "Added input node";
 
-      await expect(
-        copilotService.parseUserIntent("Test input")
-      ).rejects.toThrow();
-    });
+      copilotService.learnFromModifications(
+        originalWorkflow,
+        modifiedWorkflow,
+        feedback
+      );
 
-    it("should handle network timeouts", async () => {
-      mockCallOpenAI.mockRejectedValue(new Error("Request timeout"));
-
-      await expect(
-        copilotService.parseUserIntent("Test input")
-      ).rejects.toThrow("Request timeout");
-    });
-
-    it("should handle empty responses", async () => {
-      mockCallOpenAI.mockResolvedValue({
-        content: "",
-      });
-
-      await expect(
-        copilotService.parseUserIntent("Test input")
-      ).rejects.toThrow();
+      expect(
+        mockNaturalLanguageToWorkflowService.learnFromModifications
+      ).toHaveBeenCalledWith(originalWorkflow, modifiedWorkflow, feedback);
     });
   });
 });
