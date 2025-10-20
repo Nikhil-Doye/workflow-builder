@@ -197,7 +197,8 @@ export class ExecutionEngine {
     );
     const conditions = this.extractConditions(edges);
 
-    return {
+    // Build plan object
+    const plan: ExecutionPlan = {
       id: `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       workflowId,
       nodes: executionNodes,
@@ -209,6 +210,11 @@ export class ExecutionEngine {
       results: new Map(),
       errors: new Map(),
     };
+
+    // Attach node label mapping for variable substitution
+    (plan as any).nodeLabelToId = nodeLabelToId;
+
+    return plan;
   }
 
   // Determine the best execution mode
