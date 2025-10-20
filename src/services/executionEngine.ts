@@ -831,6 +831,11 @@ export class ExecutionEngine {
       case "llmTask":
         return (await import("./processors/llmProcessor")).default;
       case "databaseQuery":
+      case "databaseInsert":
+      case "databaseUpdate":
+      case "databaseDelete":
+      case "databaseAggregate":
+      case "databaseTransaction":
         return (await import("./processors/databaseProcessor")).default;
       case "structuredOutput":
         return (await import("./processors/structuredOutputProcessor")).default;
@@ -839,7 +844,9 @@ export class ExecutionEngine {
       case "similaritySearch":
         return (await import("./processors/similarityProcessor")).default;
       default:
-        console.log(`Using default processor for unknown type: ${nodeType}`);
+        console.warn(
+          `Using default processor for unknown/unsupported type: ${nodeType}`
+        );
         return (await import("./processors/defaultProcessor")).default;
     }
   }

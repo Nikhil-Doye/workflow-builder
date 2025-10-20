@@ -4,6 +4,7 @@ import {
   MixedValidationResult,
   WorkflowNodeStructure,
 } from "../types";
+import { ProcessorRegistry } from "../services/processors/ProcessorRegistry";
 
 /**
  * Validate generated workflow structure
@@ -75,6 +76,11 @@ export function validateWorkflowStructure(
   const labelValidation = validateNodeLabels(workflow);
   issues.push(...labelValidation.issues);
   suggestions.push(...labelValidation.suggestions);
+
+  // Check for unsupported node types
+  const nodeTypeValidation = validateNodeTypes(workflow);
+  issues.push(...nodeTypeValidation.issues);
+  suggestions.push(...nodeTypeValidation.suggestions);
 
   return {
     isValid: issues.length === 0,
@@ -705,4 +711,99 @@ function workflowAddressesRequirement(
   }
 
   return true;
+}
+
+/**
+ * Validate node types in the workflow
+ */
+function validateNodeTypes(workflow: WorkflowStructure): {
+  issues: string[];
+  suggestions: string[];
+} {
+  const issues: string[] = [];
+  const suggestions: string[] = [];
+
+  workflow.nodes.forEach((node, index) => {
+    const nodeType = node.type;
+    const nodeStatus = ProcessorRegistry.getNodeTypeStatus(nodeType);
+    const similarTypes = ProcessorRegistry.getSimilarTypes(nodeType);
+
+    switch (nodeStatus.status) {
+      case "unsupported":
+        issues.push(
+          `Node ${index + 1} (${
+            node.label || nodeType
+          }) uses unsupported node type: ${nodeType}`
+        );
+        if (similarTypes.length > 0) {
+          suggestions.push(
+            `Consider replacing '${nodeType}' with one of these supported types: ${similarTypes.join(
+              ", "
+            )}`
+          );
+        } else {
+          suggestions.push(
+            `Node type '${nodeType}' is not supported. Check the documentation for available node types.`
+          );
+        }
+        break;
+
+      case "deprecated":
+        issues.push(
+          `Node ${index + 1} (${
+            node.label || nodeType
+          }) uses deprecated node type: ${nodeType}`
+        );
+        if (similarTypes.length > 0) {
+          suggestions.push(
+            `Consider migrating '${nodeType}' to: ${similarTypes.join(", ")}`
+          );
+        } else {
+          suggestions.push(
+            `Node type '${nodeType}' is deprecated. Check the documentation for migration guidance.`
+          );
+        }
+        break;
+
+      case "experimental":
+        // Experimental types are warnings, not errors
+        suggestions.push(
+          `Node ${index + 1} (${
+            node.label || nodeType
+          }) uses experimental node type: ${nodeType}. Use with caution.`
+        );
+        break;
+
+      case "supported":
+        // No issues for supported types
+        break;
+    }
+  });
+
+  // Check for mixed deprecated and supported types
+  const deprecatedNodes = workflow.nodes.filter(
+    (node) =>
+      ProcessorRegistry.getNodeTypeStatus(node.type).status === "deprecated"
+  );
+  const unsupportedNodes = workflow.nodes.filter(
+    (node) =>
+      ProcessorRegistry.getNodeTypeStatus(node.type).status === "unsupported"
+  );
+
+  if (
+    deprecatedNodes.length > 0 &&
+    workflow.nodes.length > deprecatedNodes.length
+  ) {
+    suggestions.push(
+      `Workflow contains ${deprecatedNodes.length} deprecated node type(s). Consider updating to supported alternatives.`
+    );
+  }
+
+  if (unsupportedNodes.length > 0) {
+    issues.push(
+      `Workflow contains ${unsupportedNodes.length} unsupported node type(s). These will use fallback processing.`
+    );
+  }
+
+  return { issues, suggestions };
 }
