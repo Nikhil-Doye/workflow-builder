@@ -39,6 +39,9 @@ class DatabaseConnectionManager {
   async addConnection(
     connection: Omit<DatabaseConnection, "id" | "status">
   ): Promise<string> {
+    // Validate credentials before creating the connection
+    this.validateCredentials(connection as DatabaseConnection);
+
     const id = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newConnection: DatabaseConnection = {
       ...connection,
@@ -59,6 +62,12 @@ class DatabaseConnectionManager {
     if (!connection) return false;
 
     const updatedConnection = { ...connection, ...updates };
+
+    // Validate credentials if connection details are being updated
+    if (this.hasConnectionDetailsChanged(updates)) {
+      this.validateCredentials(updatedConnection);
+    }
+
     this.connections.set(id, updatedConnection);
     this.saveConnections();
     return true;
@@ -241,19 +250,13 @@ class DatabaseConnectionManager {
 
   // Private Methods
   private createConnector(connection: DatabaseConnection): any {
-    const config = {
+    // Validate credentials based on database type
+    this.validateCredentials(connection);
+
+    const baseConfig = {
       id: connection.id,
       name: connection.name,
       type: connection.type,
-      credentials: {
-        host: connection.host,
-        port: connection.port,
-        database: connection.database,
-        username: connection.username,
-        password: connection.password,
-        connectionString: connection.connectionString,
-        ssl: connection.ssl,
-      },
       settings: {
         connectionTimeout: 30000,
         queryTimeout: 60000,
@@ -262,14 +265,175 @@ class DatabaseConnectionManager {
 
     switch (connection.type) {
       case "mongodb":
-        return new MongoConnector(config as any);
+        return new MongoConnector({
+          ...baseConfig,
+          credentials: {
+            connectionString: connection.connectionString!,
+            database: connection.database,
+            username: connection.username,
+            password: connection.password,
+          },
+        } as any);
       case "mysql":
-        return new MySQLConnector(config as any);
+        return new MySQLConnector({
+          ...baseConfig,
+          credentials: {
+            host: connection.host,
+            port: connection.port,
+            database: connection.database,
+            username: connection.username!,
+            password: connection.password!,
+            ssl: connection.ssl,
+          },
+        } as any);
       case "postgresql":
-        return new PostgresConnector(config as any);
+        return new PostgresConnector({
+          ...baseConfig,
+          credentials: {
+            host: connection.host,
+            port: connection.port,
+            database: connection.database,
+            username: connection.username!,
+            password: connection.password!,
+            ssl: connection.ssl,
+          },
+        } as any);
       default:
         throw new Error(`Unsupported database type: ${connection.type}`);
     }
+  }
+
+  private validateCredentials(connection: DatabaseConnection): void {
+    switch (connection.type) {
+      case "mongodb":
+        this.validateMongoCredentials(connection);
+        break;
+      case "mysql":
+        this.validateMySQLCredentials(connection);
+        break;
+      case "postgresql":
+        this.validatePostgresCredentials(connection);
+        break;
+      default:
+        throw new Error(`Unsupported database type: ${connection.type}`);
+    }
+  }
+
+  private validateMongoCredentials(connection: DatabaseConnection): void {
+    const errors: string[] = [];
+
+    // MongoDB primarily uses connection strings
+    if (!connection.connectionString) {
+      errors.push(
+        "MongoDB requires a connection string (e.g., 'mongodb://localhost:27017' or 'mongodb+srv://...')"
+      );
+    }
+
+    // Database name is required
+    if (!connection.database) {
+      errors.push("Database name is required for MongoDB connections");
+    }
+
+    // Validate connection string format if provided
+    if (connection.connectionString) {
+      if (!this.isValidMongoConnectionString(connection.connectionString)) {
+        errors.push(
+          "Invalid MongoDB connection string format. Expected format: 'mongodb://host:port' or 'mongodb+srv://cluster'"
+        );
+      }
+    }
+
+    if (errors.length > 0) {
+      throw new Error(
+        `MongoDB connection validation failed:\n${errors.join("\n")}`
+      );
+    }
+  }
+
+  private validateMySQLCredentials(connection: DatabaseConnection): void {
+    const errors: string[] = [];
+
+    if (!connection.host) {
+      errors.push("Host is required for MySQL connections");
+    }
+
+    if (!connection.port || connection.port <= 0 || connection.port > 65535) {
+      errors.push(
+        "Valid port number (1-65535) is required for MySQL connections"
+      );
+    }
+
+    if (!connection.database) {
+      errors.push("Database name is required for MySQL connections");
+    }
+
+    if (!connection.username) {
+      errors.push("Username is required for MySQL connections");
+    }
+
+    if (!connection.password) {
+      errors.push("Password is required for MySQL connections");
+    }
+
+    if (errors.length > 0) {
+      throw new Error(
+        `MySQL connection validation failed:\n${errors.join("\n")}`
+      );
+    }
+  }
+
+  private validatePostgresCredentials(connection: DatabaseConnection): void {
+    const errors: string[] = [];
+
+    if (!connection.host) {
+      errors.push("Host is required for PostgreSQL connections");
+    }
+
+    if (!connection.port || connection.port <= 0 || connection.port > 65535) {
+      errors.push(
+        "Valid port number (1-65535) is required for PostgreSQL connections"
+      );
+    }
+
+    if (!connection.database) {
+      errors.push("Database name is required for PostgreSQL connections");
+    }
+
+    if (!connection.username) {
+      errors.push("Username is required for PostgreSQL connections");
+    }
+
+    if (!connection.password) {
+      errors.push("Password is required for PostgreSQL connections");
+    }
+
+    if (errors.length > 0) {
+      throw new Error(
+        `PostgreSQL connection validation failed:\n${errors.join("\n")}`
+      );
+    }
+  }
+
+  private isValidMongoConnectionString(connectionString: string): boolean {
+    // Basic validation for MongoDB connection strings
+    const mongoPattern = /^mongodb(\+srv)?:\/\//;
+    return mongoPattern.test(connectionString);
+  }
+
+  private hasConnectionDetailsChanged(
+    updates: Partial<DatabaseConnection>
+  ): boolean {
+    const connectionFields = [
+      "type",
+      "host",
+      "port",
+      "database",
+      "username",
+      "password",
+      "connectionString",
+      "ssl",
+    ];
+    return connectionFields.some((field) => field in updates);
   }
 
   private loadConnections(): void {
