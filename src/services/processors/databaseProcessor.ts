@@ -1,11 +1,17 @@
 import { databaseConnectionManager } from "../databaseConnectionManager";
 import { ExecutionContext, ExecutionPlan } from "../executionEngine";
+import { CommandFactory } from "./commands/CommandFactory";
+import {
+  CommandExecutionResult,
+  CommandExecutionContext,
+} from "./commands/DatabaseCommand";
 
 export default async function databaseProcessor(
   context: ExecutionContext,
   plan: ExecutionPlan
-): Promise<any> {
+): Promise<CommandExecutionResult> {
   const { config } = context;
+  const startTime = Date.now();
 
   try {
     if (!config.connectionId) {
@@ -30,57 +36,57 @@ export default async function databaseProcessor(
       }
     }
 
-    // Execute the query based on node type
-    let result;
-    switch (context.nodeType) {
-      case "databaseQuery":
-        result = await databaseConnectionManager.executeQuery(
-          config.connectionId,
-          config.query,
-          config.params ? JSON.parse(config.params) : []
-        );
-        break;
-      case "databaseInsert":
-        result = await databaseConnectionManager.executeQuery(
-          config.connectionId,
-          "insert",
-          [config.document ? JSON.parse(config.document) : {}]
-        );
-        break;
-      case "databaseUpdate":
-        result = await databaseConnectionManager.executeQuery(
-          config.connectionId,
-          "update",
-          [
-            config.filter ? JSON.parse(config.filter) : {},
-            config.update ? JSON.parse(config.update) : {},
-          ]
-        );
-        break;
-      case "databaseDelete":
-        result = await databaseConnectionManager.executeQuery(
-          config.connectionId,
-          "delete",
-          [config.filter ? JSON.parse(config.filter) : {}]
-        );
-        break;
-      default:
-        throw new Error(`Unsupported database operation: ${context.nodeType}`);
+    // Create command using the factory
+    const command = CommandFactory.createCommandFromContext(context);
+
+    // Validate command before execution
+    if (!command.validate()) {
+      throw new Error(`Invalid command configuration for ${context.nodeType}`);
     }
 
+    // Get the connector instance
+    const connector = databaseConnectionManager.getConnector(
+      config.connectionId
+    );
+    if (!connector) {
+      throw new Error("Database connector not available");
+    }
+
+    // Execute the command
+    const result = await command.execute(connector);
+    const executionTime = Date.now() - startTime;
+
+    // Create execution context for logging
+    const executionContext: CommandExecutionContext = {
+      connectionId: config.connectionId,
+      nodeType: context.nodeType,
+      executionId: plan.id,
+      timestamp: new Date(),
+    };
+
     return {
-      operation: context.nodeType,
-      query: config.query,
-      result: result.data,
-      metadata: result.metadata,
-      success: result.success,
-      error: result.error,
+      ...result,
+      operation: command.getOperationType(),
+      description: command.getDescription(),
+      executionTime,
+      context: executionContext,
     };
   } catch (error) {
-    throw new Error(
-      `Database operation failed: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
+    const executionTime = Date.now() - startTime;
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+
+    return {
+      success: false,
+      data: undefined,
+      error: `Database operation failed: ${errorMessage}`,
+      operation: context.nodeType,
+      description: `Failed ${context.nodeType} operation`,
+      executionTime,
+      metadata: {
+        operation: context.nodeType,
+        executionTime,
+      },
+    };
   }
 }

@@ -127,19 +127,29 @@ function validateNodeConnections(workflow: WorkflowStructure): {
   const issues: string[] = [];
   const suggestions: string[] = [];
 
-  // Check if all edges reference existing nodes
-  const nodeIds = workflow.nodes.map((_, index) => `node-${index}`);
+  // Get actual node IDs from the workflow structure
+  const nodeIds = new Set(workflow.nodes.map((node) => node.id));
+  const nodeIdToIndex = new Map(
+    workflow.nodes.map((node, index) => [node.id, index])
+  );
 
+  // Check if all edges reference existing nodes
   workflow.edges.forEach((edge, index) => {
-    if (!nodeIds.includes(edge.source)) {
+    if (!nodeIds.has(edge.source)) {
       issues.push(
         `Edge ${index} references non-existent source node: ${edge.source}`
       );
+      suggestions.push(
+        `Available source nodes: ${Array.from(nodeIds).join(", ")}`
+      );
     }
 
-    if (!nodeIds.includes(edge.target)) {
+    if (!nodeIds.has(edge.target)) {
       issues.push(
         `Edge ${index} references non-existent target node: ${edge.target}`
+      );
+      suggestions.push(
+        `Available target nodes: ${Array.from(nodeIds).join(", ")}`
       );
     }
   });
@@ -151,7 +161,9 @@ function validateNodeConnections(workflow: WorkflowStructure): {
     connectedNodes.add(edge.target);
   });
 
-  const orphanedNodes = nodeIds.filter((nodeId) => !connectedNodes.has(nodeId));
+  const orphanedNodes = Array.from(nodeIds).filter(
+    (nodeId) => !connectedNodes.has(nodeId)
+  );
   if (orphanedNodes.length > 1) {
     // Allow one orphaned node (usually the output)
     issues.push(`Orphaned nodes detected: ${orphanedNodes.join(", ")}`);
@@ -159,6 +171,121 @@ function validateNodeConnections(workflow: WorkflowStructure): {
   }
 
   return { issues, suggestions };
+}
+
+/**
+ * Create a mapping between old and new node IDs for workflow migration
+ */
+export function createNodeIdMapping(workflow: WorkflowStructure): {
+  oldToNew: Map<string, string>;
+  newToOld: Map<string, string>;
+  suggestions: string[];
+} {
+  const oldToNew = new Map<string, string>();
+  const newToOld = new Map<string, string>();
+  const suggestions: string[] = [];
+
+  // Check for index-based naming patterns that should be migrated
+  const indexBasedNodes = workflow.nodes.filter(
+    (node, index) => node.id === `node-${index}` || node.id === `node_${index}`
+  );
+
+  if (indexBasedNodes.length > 0) {
+    suggestions.push(
+      `Found ${indexBasedNodes.length} nodes with index-based IDs. Consider using more descriptive names.`
+    );
+  }
+
+  // Check for duplicate IDs
+  const nodeIds = workflow.nodes.map((node) => node.id);
+  const duplicateIds = nodeIds.filter(
+    (id, index) => nodeIds.indexOf(id) !== index
+  );
+
+  if (duplicateIds.length > 0) {
+    suggestions.push(
+      `Found duplicate node IDs: ${duplicateIds.join(
+        ", "
+      )}. These will cause validation errors.`
+    );
+  }
+
+  // Create mapping for any ID corrections needed
+  workflow.nodes.forEach((node, index) => {
+    const currentId = node.id;
+    const suggestedId = `node-${index}`;
+
+    if (currentId !== suggestedId) {
+      oldToNew.set(currentId, suggestedId);
+      newToOld.set(suggestedId, currentId);
+    }
+  });
+
+  return { oldToNew, newToOld, suggestions };
+}
+
+/**
+ * Fix node ID mismatches in edges by updating edge references
+ */
+export function fixNodeIdMismatches(workflow: WorkflowStructure): {
+  fixedWorkflow: WorkflowStructure;
+  fixesApplied: string[];
+  remainingIssues: string[];
+} {
+  const fixesApplied: string[] = [];
+  const remainingIssues: string[] = [];
+
+  // Get actual node IDs
+  const nodeIds = new Set(workflow.nodes.map((node) => node.id));
+
+  // Create a mapping for common ID patterns
+  const idMappings = new Map<string, string>();
+
+  // Try to find matches for missing node IDs
+  const missingNodeIds = new Set<string>();
+  workflow.edges.forEach((edge) => {
+    if (!nodeIds.has(edge.source)) missingNodeIds.add(edge.source);
+    if (!nodeIds.has(edge.target)) missingNodeIds.add(edge.target);
+  });
+
+  // Try to find close matches
+  missingNodeIds.forEach((missingId) => {
+    const possibleMatches = Array.from(nodeIds).filter((existingId) => {
+      // Check for common patterns
+      return (
+        existingId.includes(missingId) ||
+        missingId.includes(existingId) ||
+        existingId.toLowerCase() === missingId.toLowerCase()
+      );
+    });
+
+    if (possibleMatches.length === 1) {
+      idMappings.set(missingId, possibleMatches[0]);
+      fixesApplied.push(`Mapped ${missingId} to ${possibleMatches[0]}`);
+    } else if (possibleMatches.length > 1) {
+      remainingIssues.push(
+        `Multiple possible matches for ${missingId}: ${possibleMatches.join(
+          ", "
+        )}`
+      );
+    } else {
+      remainingIssues.push(`No match found for ${missingId}`);
+    }
+  });
+
+  // Apply fixes to edges
+  const fixedEdges = workflow.edges.map((edge) => ({
+    ...edge,
+    source: idMappings.get(edge.source) || edge.source,
+    target: idMappings.get(edge.target) || edge.target,
+  }));
+
+  const fixedWorkflow = {
+    ...workflow,
+    edges: fixedEdges,
+  };
+
+  return { fixedWorkflow, fixesApplied, remainingIssues };
 }
 
 /**

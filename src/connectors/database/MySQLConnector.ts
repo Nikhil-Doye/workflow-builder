@@ -122,4 +122,55 @@ export class MySQLConnector extends BaseConnector {
     `;
     return this.execute(query, [this.config.credentials.database]);
   }
+
+  // Transaction support
+  async beginTransaction(isolationLevel?: string): Promise<void> {
+    if (!this.connection) {
+      throw new Error("Not connected to MySQL database");
+    }
+
+    const isolationQuery = isolationLevel
+      ? `SET TRANSACTION ISOLATION LEVEL ${isolationLevel}`
+      : "";
+    if (isolationQuery) {
+      await this.connection.execute(isolationQuery);
+    }
+    await this.connection.execute("START TRANSACTION");
+    this.transactionActive = true;
+  }
+
+  async commit(): Promise<void> {
+    if (!this.transactionActive) {
+      throw new Error("No active transaction");
+    }
+
+    await this.connection.execute("COMMIT");
+    this.transactionActive = false;
+  }
+
+  async rollback(): Promise<void> {
+    if (!this.transactionActive) {
+      throw new Error("No active transaction");
+    }
+
+    await this.connection.execute("ROLLBACK");
+    this.transactionActive = false;
+  }
+
+  supportsTransactions(): boolean {
+    return true;
+  }
+
+  protected getSupportedOperations(): string[] {
+    return [
+      "query",
+      "insert",
+      "update",
+      "delete",
+      "select",
+      "create",
+      "drop",
+      "alter",
+    ];
+  }
 }

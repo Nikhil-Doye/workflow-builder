@@ -99,6 +99,21 @@ export class MongoConnector extends BaseConnector {
         case "deleteOne":
           result = await collection.deleteOne(params.filter);
           break;
+        case "aggregate":
+          result = await collection.aggregate(params.pipeline || []).toArray();
+          break;
+        case "insertMany":
+          result = await collection.insertMany(params.documents || []);
+          break;
+        case "updateMany":
+          result = await collection.updateMany(params.filter, params.update);
+          break;
+        case "deleteMany":
+          result = await collection.deleteMany(params.filter);
+          break;
+        case "count":
+          result = await collection.countDocuments(params.query || {});
+          break;
         default:
           throw new Error(`Unsupported operation: ${operation}`);
       }
@@ -108,7 +123,10 @@ export class MongoConnector extends BaseConnector {
         rowsAffected: Array.isArray(result)
           ? result.length
           : (result as any)?.acknowledged
-          ? 1
+          ? (result as any).insertedCount ||
+            (result as any).modifiedCount ||
+            (result as any).deletedCount ||
+            1
           : 0,
         queryTime: Date.now() - startTime,
       });
@@ -120,6 +138,70 @@ export class MongoConnector extends BaseConnector {
         { executionTime: Date.now() - startTime }
       );
     }
+  }
+
+  // Transaction support
+  async beginTransaction(isolationLevel?: string): Promise<void> {
+    if (!this.connection) {
+      throw new Error("Not connected to MongoDB database");
+    }
+
+    const session = this.connection.startSession();
+    session.startTransaction();
+    this.transactionActive = true;
+    // Store session for commit/rollback
+    (this as any).currentSession = session;
+  }
+
+  async commit(): Promise<void> {
+    if (!this.transactionActive) {
+      throw new Error("No active transaction");
+    }
+
+    const session = (this as any).currentSession;
+    if (session) {
+      await session.commitTransaction();
+      await session.endSession();
+      this.transactionActive = false;
+      (this as any).currentSession = null;
+    }
+  }
+
+  async rollback(): Promise<void> {
+    if (!this.transactionActive) {
+      throw new Error("No active transaction");
+    }
+
+    const session = (this as any).currentSession;
+    if (session) {
+      await session.abortTransaction();
+      await session.endSession();
+      this.transactionActive = false;
+      (this as any).currentSession = null;
+    }
+  }
+
+  supportsTransactions(): boolean {
+    return true;
+  }
+
+  protected getSupportedOperations(): string[] {
+    return [
+      "query",
+      "find",
+      "insert",
+      "insertOne",
+      "insertMany",
+      "update",
+      "updateOne",
+      "updateMany",
+      "delete",
+      "deleteOne",
+      "deleteMany",
+      "aggregate",
+      "count",
+      "ping",
+    ];
   }
 
   async getCollectionSchema(collectionName: string): Promise<ConnectorResult> {

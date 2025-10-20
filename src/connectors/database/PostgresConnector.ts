@@ -123,4 +123,57 @@ export class PostgresConnector extends BaseConnector {
     `;
     return this.execute(query);
   }
+
+  // Transaction support
+  async beginTransaction(isolationLevel?: string): Promise<void> {
+    if (!this.connection) {
+      throw new Error("Not connected to PostgreSQL database");
+    }
+
+    const isolationQuery = isolationLevel
+      ? `SET TRANSACTION ISOLATION LEVEL ${isolationLevel}`
+      : "";
+    if (isolationQuery) {
+      await this.connection.query(isolationQuery);
+    }
+    await this.connection.query("BEGIN");
+    this.transactionActive = true;
+  }
+
+  async commit(): Promise<void> {
+    if (!this.transactionActive) {
+      throw new Error("No active transaction");
+    }
+
+    await this.connection.query("COMMIT");
+    this.transactionActive = false;
+  }
+
+  async rollback(): Promise<void> {
+    if (!this.transactionActive) {
+      throw new Error("No active transaction");
+    }
+
+    await this.connection.query("ROLLBACK");
+    this.transactionActive = false;
+  }
+
+  supportsTransactions(): boolean {
+    return true;
+  }
+
+  protected getSupportedOperations(): string[] {
+    return [
+      "query",
+      "insert",
+      "update",
+      "delete",
+      "select",
+      "create",
+      "drop",
+      "alter",
+      "function",
+      "procedure",
+    ];
+  }
 }
