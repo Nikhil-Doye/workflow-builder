@@ -835,6 +835,22 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       saveWorkflowsToStorage(newWorkflows);
     } catch (error) {
       console.error("Error generating workflow from description:", error);
+
+      // Enhanced error handling with detailed context
+      if (error instanceof Error && "errorContext" in error) {
+        const errorContext = (error as any).errorContext;
+        console.error("Detailed error context:", {
+          stage: errorContext.stage,
+          toolName: errorContext.toolName,
+          errorType: errorContext.errorType,
+          suggestions: errorContext.suggestions,
+          partialResults: Object.keys(errorContext.partialResults || {}),
+        });
+
+        // You could also dispatch an error event with detailed context here
+        // for better user experience and debugging
+      }
+
       throw error;
     }
   },

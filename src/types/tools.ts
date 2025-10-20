@@ -59,6 +59,26 @@ export interface AgentResult {
   toolsUsed: string[];
   executionTime: number;
   confidence: number;
+  errorContext?: ErrorContext;
+}
+
+export interface ErrorContext {
+  stage: string;
+  toolName?: string;
+  inputParameters?: Record<string, any>;
+  partialResults?: Record<string, any>;
+  errorType:
+    | "tool_registry_miss"
+    | "tool_execution_failure"
+    | "llm_error"
+    | "validation_error"
+    | "cache_error"
+    | "unknown";
+  timestamp: number;
+  sessionId: string;
+  userInput: string;
+  stackTrace?: string;
+  suggestions?: string[];
 }
 
 export interface AgentContext {

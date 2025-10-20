@@ -92,12 +92,20 @@ export class AgentManager {
       return result;
     } catch (error) {
       console.error("Error in AgentManager:", error);
+
+      // Preserve error context if available
+      const errorContext =
+        error instanceof Error && "errorContext" in error
+          ? (error as any).errorContext
+          : undefined;
+
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
         toolsUsed: [],
         executionTime: 0,
         confidence: 0.0,
+        errorContext,
       };
     }
   }
