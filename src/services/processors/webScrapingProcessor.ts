@@ -11,7 +11,8 @@ export default async function webScrapingProcessor(
     const result = await scrapeWithFirecrawl({
       url: config.url,
       formats: config.formats || ["markdown"],
-      onlyMainContent: config.onlyMainContent || true,
+      onlyMainContent:
+        config.onlyMainContent !== undefined ? config.onlyMainContent : true,
       maxLength: config.maxLength || 10000,
     });
 
