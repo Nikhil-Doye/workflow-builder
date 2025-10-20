@@ -545,14 +545,34 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       set({ executionResults: results });
     } catch (error) {
       console.error("Workflow execution failed:", error);
+
+      // Handle validation errors specifically
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      const isValidationError =
+        errorMessage.includes("validation failed") ||
+        errorMessage.includes("Circular dependencies") ||
+        errorMessage.includes("Invalid edge") ||
+        errorMessage.includes("Self-loop detected");
+
       // Update all nodes to error status
       const errorResults: Record<string, any> = {};
       currentWorkflow.nodes.forEach((node) => {
         errorResults[node.id] = {
           status: "error",
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: errorMessage,
         };
       });
+
+      // Add validation error to results if it's a validation issue
+      if (isValidationError) {
+        errorResults["validation"] = {
+          status: "error",
+          error: errorMessage,
+          isValidationError: true,
+        };
+      }
+
       set({ executionResults: errorResults });
     } finally {
       set({ isExecuting: false });

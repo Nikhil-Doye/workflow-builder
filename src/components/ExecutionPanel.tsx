@@ -363,6 +363,26 @@ export const ExecutionPanel: React.FC = () => {
               </div>
             </div>
 
+            {/* Validation Error Display */}
+            {executionResults.validation && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+                <div className="flex items-start space-x-3">
+                  <XCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-red-800 mb-1">
+                      Workflow Validation Failed
+                    </h4>
+                    <p className="text-sm text-red-700 mb-2">
+                      {executionResults.validation.error}
+                    </p>
+                    <p className="text-xs text-red-600">
+                      Please fix the workflow structure before executing again.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3">
               {currentWorkflow?.nodes.map((node, index) => {
                 const status = getNodeStatus(node.id);
