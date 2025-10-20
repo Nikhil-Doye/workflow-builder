@@ -29,7 +29,6 @@ export const ExecutionPanel: React.FC = () => {
     executeWorkflow,
     clearExecutionResults,
     executionMode,
-    currentExecution,
     getExecutionStats,
     panelStates,
     togglePanel,

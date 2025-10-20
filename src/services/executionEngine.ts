@@ -118,7 +118,11 @@ export class ExecutionEngine {
         onNodeUpdate("validation", "error", null, errorMessage);
       }
 
-      throw new Error(`Workflow validation failed: ${errorMessage}`);
+      // Store the failed execution plan
+      this.activeExecutions.set(executionId, failedPlan);
+      this.executionHistory.push(failedPlan);
+
+      return failedPlan;
     }
 
     const plan = this.createExecutionPlan(workflowId, nodes, edges, options);
@@ -626,6 +630,7 @@ export class ExecutionEngine {
 
       // Evaluate the condition using Function constructor (safer than eval)
       // This creates a function in a controlled scope
+      // eslint-disable-next-line no-new-func
       const evaluateExpression = new Function("return " + evaluatedCondition);
       return evaluateExpression();
     } catch (error) {
