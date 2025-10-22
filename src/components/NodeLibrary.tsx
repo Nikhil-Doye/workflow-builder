@@ -14,7 +14,13 @@ import {
   // ChevronRight, // Removed unused import
   Zap,
   Search as SearchIcon,
+  HelpCircle,
 } from "lucide-react";
+import {
+  getNodeTypeConfig,
+  getNodeTypesByCategory,
+} from "../config/nodeTypeConfigs";
+import { NodeType } from "../types";
 
 export const NodeLibrary: React.FC = () => {
   const { panelStates, togglePanel } = useWorkflowStore();
@@ -24,6 +30,7 @@ export const NodeLibrary: React.FC = () => {
   const [focusedNodeIndex, setFocusedNodeIndex] = useState(-1);
   const [focusedCategoryIndex, setFocusedCategoryIndex] = useState(0);
   const [announcement, setAnnouncement] = useState("");
+  const [showHelp, setShowHelp] = useState<string | null>(null);
 
   // Refs for focus management
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -34,128 +41,69 @@ export const NodeLibrary: React.FC = () => {
   const isCollapsed = panelStates.nodeLibrary.isCollapsed;
   const isHidden = panelStates.nodeLibrary.isHidden;
 
-  const nodeTypesList = [
-    {
-      type: "dataInput",
-      label: "Data Input",
-      icon: ArrowRight,
-      description: "Start your workflow with data",
-      color: "blue",
-      category: "Input",
-    },
-    {
-      type: "webScraping",
-      label: "Web Scraping",
-      icon: Globe,
-      description: "Extract content from websites",
-      color: "green",
-      category: "Data",
-    },
-    {
-      type: "llmTask",
-      label: "AI Task",
-      icon: Brain,
-      description: "Process with AI models",
-      color: "purple",
-      category: "AI",
-    },
-    {
-      type: "embeddingGenerator",
-      label: "Embedding",
-      icon: Zap,
-      description: "Generate vector embeddings",
-      color: "yellow",
-      category: "AI",
-    },
-    {
-      type: "similaritySearch",
-      label: "Similarity Search",
-      icon: SearchIcon,
-      description: "Find similar content",
-      color: "orange",
-      category: "AI",
-    },
-    {
-      type: "structuredOutput",
-      label: "Structured Output",
-      icon: FileText,
-      description: "Format data with schemas",
-      color: "indigo",
-      category: "Output",
-    },
-    {
-      type: "dataOutput",
-      label: "Data Output",
-      icon: ArrowRight,
-      description: "Export your results",
-      color: "gray",
-      category: "Output",
-    },
-    {
-      type: "databaseQuery",
-      label: "Database Query",
-      icon: Database,
-      description: "Query database with SQL",
-      color: "cyan",
-      category: "Database",
-    },
-    {
-      type: "databaseInsert",
-      label: "Database Insert",
-      icon: Database,
-      description: "Insert data into database",
-      color: "cyan",
-      category: "Database",
-    },
-    {
-      type: "databaseUpdate",
-      label: "Database Update",
-      icon: Database,
-      description: "Update database records",
-      color: "cyan",
-      category: "Database",
-    },
-    {
-      type: "databaseDelete",
-      label: "Database Delete",
-      icon: Database,
-      description: "Delete database records",
-      color: "cyan",
-      category: "Database",
-    },
+  const nodeTypesList: NodeType[] = [
+    "dataInput",
+    "webScraping",
+    "llmTask",
+    "embeddingGenerator",
+    "similaritySearch",
+    "structuredOutput",
+    "dataOutput",
+    "databaseQuery",
+    "databaseInsert",
+    "databaseUpdate",
+    "databaseDelete",
   ];
 
+  const nodeTypeIcons: Record<NodeType, any> = {
+    dataInput: ArrowRight,
+    webScraping: Globe,
+    llmTask: Brain,
+    embeddingGenerator: Zap,
+    similaritySearch: SearchIcon,
+    structuredOutput: FileText,
+    dataOutput: ArrowRight,
+    databaseQuery: Database,
+    databaseInsert: Database,
+    databaseUpdate: Database,
+    databaseDelete: Database,
+  };
+
+  const nodeTypeColors: Record<NodeType, string> = {
+    dataInput: "blue",
+    webScraping: "green",
+    llmTask: "purple",
+    embeddingGenerator: "yellow",
+    similaritySearch: "orange",
+    structuredOutput: "indigo",
+    dataOutput: "gray",
+    databaseQuery: "cyan",
+    databaseInsert: "cyan",
+    databaseUpdate: "cyan",
+    databaseDelete: "cyan",
+  };
+
+  const nodeTypesByCategory = getNodeTypesByCategory();
   const categories = [
     { name: "All", count: nodeTypesList.length },
-    {
-      name: "Input",
-      count: nodeTypesList.filter((n) => n.category === "Input").length,
-    },
-    {
-      name: "AI",
-      count: nodeTypesList.filter((n) => n.category === "AI").length,
-    },
-    {
-      name: "Data",
-      count: nodeTypesList.filter((n) => n.category === "Data").length,
-    },
-    {
-      name: "Database",
-      count: nodeTypesList.filter((n) => n.category === "Database").length,
-    },
-    {
-      name: "Output",
-      count: nodeTypesList.filter((n) => n.category === "Output").length,
-    },
+    ...Object.entries(nodeTypesByCategory).map(([category, nodes]) => ({
+      name: category,
+      count: nodes.length,
+    })),
   ];
 
-  const filteredNodes = nodeTypesList.filter(
-    (nodeType) =>
-      (selectedCategory === "All" || nodeType.category === selectedCategory) &&
+  const filteredNodes = nodeTypesList.filter((nodeType) => {
+    const config = getNodeTypeConfig(nodeType);
+    return (
+      (selectedCategory === "All" || config.category === selectedCategory) &&
       (searchQuery === "" ||
-        nodeType.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        nodeType.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+        config.userFriendlyName
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        config.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        config.technicalName.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  });
 
   // Accessibility functions
   const announceToScreenReader = useCallback((message: string) => {
@@ -173,7 +121,10 @@ export const NodeLibrary: React.FC = () => {
           if (focusedNodeIndex < filteredNodes.length - 1) {
             setFocusedNodeIndex(focusedNodeIndex + 1);
             announceToScreenReader(
-              `Focused on ${filteredNodes[focusedNodeIndex + 1]?.label}`
+              `Focused on ${
+                getNodeTypeConfig(filteredNodes[focusedNodeIndex + 1])
+                  .userFriendlyName
+              }`
             );
           }
           break;
@@ -182,7 +133,10 @@ export const NodeLibrary: React.FC = () => {
           if (focusedNodeIndex > 0) {
             setFocusedNodeIndex(focusedNodeIndex - 1);
             announceToScreenReader(
-              `Focused on ${filteredNodes[focusedNodeIndex - 1]?.label}`
+              `Focused on ${
+                getNodeTypeConfig(filteredNodes[focusedNodeIndex - 1])
+                  .userFriendlyName
+              }`
             );
           }
           break;
@@ -196,7 +150,9 @@ export const NodeLibrary: React.FC = () => {
             const nodeType = filteredNodes[focusedNodeIndex];
             // Simulate drag and drop for keyboard users
             announceToScreenReader(
-              `Adding ${nodeType.label} to canvas. Use mouse to position the node.`
+              `Adding ${
+                getNodeTypeConfig(nodeType).userFriendlyName
+              } to canvas. Use mouse to position the node.`
             );
             // In a real implementation, you would trigger the node creation here
           }
@@ -510,59 +466,103 @@ export const NodeLibrary: React.FC = () => {
                   </div>
                 ) : (
                   filteredNodes.map((nodeType, index) => {
-                    const IconComponent = nodeType.icon;
+                    const config = getNodeTypeConfig(nodeType);
+                    const IconComponent = nodeTypeIcons[nodeType];
                     const isFocused = focusedNodeIndex === index;
+                    const isHelpOpen = showHelp === nodeType;
+
                     return (
-                      <div
-                        key={nodeType.type}
-                        data-node-index={index}
-                        className={`group flex items-center space-x-3 p-3 rounded-xl border cursor-move transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none ${
-                          isFocused ? "ring-2 ring-blue-500 ring-offset-2" : ""
-                        } ${getColorClasses(nodeType.color)}`}
-                        draggable
-                        onDragStart={(event) =>
-                          onDragStart(event, nodeType.type)
-                        }
-                        onClick={() => handleNodeClick(nodeType)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            handleNodeClick(nodeType);
+                      <div key={nodeType} className="space-y-2">
+                        <div
+                          data-node-index={index}
+                          className={`group flex items-center space-x-3 p-3 rounded-xl border cursor-move transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none ${
+                            isFocused
+                              ? "ring-2 ring-blue-500 ring-offset-2"
+                              : ""
+                          } ${getColorClasses(nodeTypeColors[nodeType])}`}
+                          draggable
+                          onDragStart={(event) => onDragStart(event, nodeType)}
+                          onClick={() =>
+                            handleNodeClick({
+                              type: nodeType,
+                              label: config.userFriendlyName,
+                            })
                           }
-                        }}
-                        role="option"
-                        aria-selected={isFocused}
-                        tabIndex={isFocused ? 0 : -1}
-                        aria-label={`${nodeType.label} node, ${nodeType.category} category. ${nodeType.description}. Drag to canvas or press Enter to add.`}
-                        aria-describedby={`node-${nodeType.type}-description`}
-                      >
-                        <div className="flex-shrink-0">
-                          <div
-                            className="w-8 h-8 rounded-lg bg-white/80 flex items-center justify-center"
-                            aria-hidden="true"
-                          >
-                            <IconComponent className="w-4 h-4" />
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium truncate">
-                              {nodeType.label}
-                            </span>
-                            <span
-                              className="text-xs px-1.5 py-0.5 bg-white/60 rounded-full"
-                              aria-label={`Category: ${nodeType.category}`}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleNodeClick({
+                                type: nodeType,
+                                label: config.userFriendlyName,
+                              });
+                            }
+                          }}
+                          role="option"
+                          aria-selected={isFocused}
+                          tabIndex={isFocused ? 0 : -1}
+                          aria-label={`${config.userFriendlyName} node, ${config.category} category. ${config.description}. Drag to canvas or press Enter to add.`}
+                          aria-describedby={`node-${nodeType}-description`}
+                        >
+                          <div className="flex-shrink-0">
+                            <div
+                              className="w-8 h-8 rounded-lg bg-white/80 flex items-center justify-center"
+                              aria-hidden="true"
                             >
-                              {nodeType.category}
-                            </span>
+                              <span className="text-lg">{config.icon}</span>
+                            </div>
                           </div>
-                          <p
-                            id={`node-${nodeType.type}-description`}
-                            className="text-xs text-gray-500 truncate"
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm font-medium truncate">
+                                {config.userFriendlyName}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                ({config.technicalName})
+                              </span>
+                              <span
+                                className="text-xs px-1.5 py-0.5 bg-white/60 rounded-full"
+                                aria-label={`Category: ${config.category}`}
+                              >
+                                {config.category}
+                              </span>
+                            </div>
+                            <p
+                              id={`node-${nodeType}-description`}
+                              className="text-xs text-gray-500 truncate"
+                            >
+                              {config.description}
+                            </p>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowHelp(isHelpOpen ? null : nodeType);
+                            }}
+                            className="help-icon opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Get help with this node"
+                            aria-label={`Get help for ${config.userFriendlyName}`}
                           >
-                            {nodeType.description}
-                          </p>
+                            <HelpCircle className="w-4 h-4 text-gray-400 hover:text-blue-500" />
+                          </button>
                         </div>
+
+                        {isHelpOpen && (
+                          <div className="help-panel p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="text-sm text-gray-700 mb-2">
+                              {config.helpText}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              <strong>Common uses:</strong>
+                              <ul className="list-disc list-inside mt-1 space-y-1">
+                                {config.commonUseCases.map(
+                                  (useCase, useIndex) => (
+                                    <li key={useIndex}>{useCase}</li>
+                                  )
+                                )}
+                              </ul>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })

@@ -19,6 +19,9 @@ import { Badge } from "./ui/badge";
 import { DatabaseNodeConfiguration } from "./DatabaseNodeConfiguration";
 import { LabelChangeDialog } from "./LabelChangeDialog";
 import { LabelDependencyManager } from "../utils/labelDependencyManager";
+import { FieldWithHelp } from "./FieldWithHelp";
+import { getNodeTypeConfig } from "../config/nodeTypeConfigs";
+import { getFieldsForNodeType } from "../config/fieldConfigs";
 
 interface NodeConfigurationProps {
   nodeId: string;
@@ -531,119 +534,35 @@ Return only the optimized prompt:`,
   const renderField = (field: any) => {
     const value = currentData.config[field.key] || field.defaultValue || "";
 
-    switch (field.type) {
-      case "textarea":
-        return (
-          <div className="space-y-2">
-            <Textarea
-              value={value}
-              onChange={(e) => handleConfigChange(field.key, e.target.value)}
-              placeholder={field.placeholder}
-              rows={3}
-            />
-            {data.type === "llmTask" && field.key === "prompt" && (
-              <div className="flex items-center space-x-2">
-                <Button
-                  onClick={handleOptimizePrompt}
-                  disabled={isOptimizing || !currentData.config.prompt}
-                  size="sm"
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  {isOptimizing ? "Optimizing..." : "Optimize Prompt"}
-                </Button>
-              </div>
-            )}
+    return (
+      <div className="space-y-2">
+        <FieldWithHelp
+          fieldName={field.key}
+          value={value}
+          onChange={(newValue) => handleConfigChange(field.key, newValue)}
+          type={field.type}
+          options={field.options}
+          multiple={field.multiple}
+          placeholder={field.placeholder}
+          min={field.min}
+          max={field.max}
+          step={field.step}
+        />
+        {data.type === "llmTask" && field.key === "prompt" && (
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={handleOptimizePrompt}
+              disabled={isOptimizing || !currentData.config.prompt}
+              size="sm"
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              {isOptimizing ? "Optimizing..." : "Optimize Prompt"}
+            </Button>
           </div>
-        );
-      case "select":
-        if (field.multiple) {
-          return (
-            <div className="space-y-2">
-              {field.options.map((option: string) => (
-                <label key={option} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={
-                      Array.isArray(value) ? value.includes(option) : false
-                    }
-                    onChange={(e) => {
-                      const currentValues = Array.isArray(value) ? value : [];
-                      if (e.target.checked) {
-                        handleConfigChange(field.key, [
-                          ...currentValues,
-                          option,
-                        ]);
-                      } else {
-                        handleConfigChange(
-                          field.key,
-                          currentValues.filter((v: string) => v !== option)
-                        );
-                      }
-                    }}
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="text-sm text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-          );
-        }
-        return (
-          <Select
-            value={value}
-            onValueChange={(newValue: string) =>
-              handleConfigChange(field.key, newValue)
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={`Select ${field.label}`} />
-            </SelectTrigger>
-            <SelectContent>
-              {field.options.map((option: string) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      case "checkbox":
-        return (
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={value}
-              onChange={(e) => handleConfigChange(field.key, e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span className="text-sm text-gray-700">Enable {field.label}</span>
-          </label>
-        );
-      case "number":
-        return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) =>
-              handleConfigChange(field.key, parseFloat(e.target.value) || 0)
-            }
-            placeholder={field.placeholder}
-            min={field.min}
-            max={field.max}
-            step={field.step}
-          />
-        );
-      default:
-        return (
-          <Input
-            type="text"
-            value={value}
-            onChange={(e) => handleConfigChange(field.key, e.target.value)}
-            placeholder={field.placeholder}
-          />
-        );
-    }
+        )}
+      </div>
+    );
   };
 
   return (
@@ -652,9 +571,15 @@ Return only the optimized prompt:`,
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div className="flex items-center space-x-2">
             <Settings className="w-5 h-5 text-gray-600" />
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              {config.title}
-            </CardTitle>
+            <div>
+              <CardTitle className="text-lg font-semibold text-gray-900">
+                {getNodeTypeConfig(data.type).userFriendlyName} Configuration
+              </CardTitle>
+              <p className="text-sm text-gray-500">
+                {getNodeTypeConfig(data.type).technicalName} •{" "}
+                {getNodeTypeConfig(data.type).description}
+              </p>
+            </div>
           </div>
           <Button
             onClick={onClose}
@@ -667,24 +592,16 @@ Return only the optimized prompt:`,
         </CardHeader>
 
         <CardContent className="space-y-4 overflow-y-auto max-h-[60vh]">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Node Label
-            </label>
-            <Input
-              type="text"
-              value={currentData.label}
-              onChange={(e) => handleLabelChange(e.target.value)}
-            />
-          </div>
+          <FieldWithHelp
+            fieldName="label"
+            value={currentData.label}
+            onChange={handleLabelChange}
+            type="text"
+            placeholder="Enter node label"
+          />
 
           {config.fields.map((field) => (
-            <div key={field.key}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {field.label}
-              </label>
-              {renderField(field)}
-            </div>
+            <div key={field.key}>{renderField(field)}</div>
           ))}
 
           {/* Optimization Result Display */}
