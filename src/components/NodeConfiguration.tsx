@@ -1,19 +1,10 @@
 import React, { useState } from "react";
-import { NodeData, Workflow } from "../types";
+import { NodeData } from "../types";
 import { useWorkflowStore } from "../store/workflowStore";
 import { X, Settings, Sparkles } from "lucide-react";
 import { promptOptimizer } from "../services/promptOptimizer";
 import { callOpenAI } from "../services/openaiService";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { DatabaseNodeConfiguration } from "./DatabaseNodeConfiguration";
@@ -21,7 +12,6 @@ import { LabelChangeDialog } from "./LabelChangeDialog";
 import { LabelDependencyManager } from "../utils/labelDependencyManager";
 import { FieldWithHelp } from "./FieldWithHelp";
 import { getNodeTypeConfig } from "../config/nodeTypeConfigs";
-import { getFieldsForNodeType } from "../config/fieldConfigs";
 
 interface NodeConfigurationProps {
   nodeId: string;

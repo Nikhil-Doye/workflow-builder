@@ -1,21 +1,12 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { useWorkflowStore } from "../store/workflowStore";
-import {
-  Search,
-  Grid,
-  List,
-  Brain,
-  Globe,
-  ArrowRight,
-  Database,
-  FileText,
-  // X, // Removed unused import
-  ChevronLeft,
-  // ChevronRight, // Removed unused import
-  Zap,
-  Search as SearchIcon,
-  HelpCircle,
-} from "lucide-react";
+import { Search, Grid, List, ChevronLeft, HelpCircle } from "lucide-react";
 import {
   getNodeTypeConfig,
   getNodeTypesByCategory,
@@ -55,20 +46,6 @@ export const NodeLibrary: React.FC = () => {
     "databaseDelete",
   ];
 
-  const nodeTypeIcons: Record<NodeType, any> = {
-    dataInput: ArrowRight,
-    webScraping: Globe,
-    llmTask: Brain,
-    embeddingGenerator: Zap,
-    similaritySearch: SearchIcon,
-    structuredOutput: FileText,
-    dataOutput: ArrowRight,
-    databaseQuery: Database,
-    databaseInsert: Database,
-    databaseUpdate: Database,
-    databaseDelete: Database,
-  };
-
   const nodeTypeColors: Record<NodeType, string> = {
     dataInput: "blue",
     webScraping: "green",
@@ -84,13 +61,16 @@ export const NodeLibrary: React.FC = () => {
   };
 
   const nodeTypesByCategory = getNodeTypesByCategory();
-  const categories = [
-    { name: "All", count: nodeTypesList.length },
-    ...Object.entries(nodeTypesByCategory).map(([category, nodes]) => ({
-      name: category,
-      count: nodes.length,
-    })),
-  ];
+  const categories = useMemo(
+    () => [
+      { name: "All", count: nodeTypesList.length },
+      ...Object.entries(nodeTypesByCategory).map(([category, nodes]) => ({
+        name: category,
+        count: nodes.length,
+      })),
+    ],
+    [nodeTypesByCategory, nodeTypesList.length]
+  );
 
   const filteredNodes = nodeTypesList.filter((nodeType) => {
     const config = getNodeTypeConfig(nodeType);
@@ -269,7 +249,6 @@ export const NodeLibrary: React.FC = () => {
         className={`bg-white border-r border-gray-200 flex flex-col shadow-lg transition-all duration-300 ${
           isCollapsed ? "w-16" : "w-64 lg:w-72"
         }`}
-        role="complementary"
         aria-label="Node Library"
       >
         {/* Header */}
@@ -467,7 +446,6 @@ export const NodeLibrary: React.FC = () => {
                 ) : (
                   filteredNodes.map((nodeType, index) => {
                     const config = getNodeTypeConfig(nodeType);
-                    const IconComponent = nodeTypeIcons[nodeType];
                     const isFocused = focusedNodeIndex === index;
                     const isHelpOpen = showHelp === nodeType;
 
