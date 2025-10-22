@@ -19,6 +19,9 @@ import { NodeConfiguration } from "./NodeConfiguration";
 import { WorkflowToolbar } from "./WorkflowToolbar";
 import { CopilotPanel } from "./CopilotPanel";
 import { NodeLibrary } from "./NodeLibrary";
+import { ConnectionSuggestions } from "./ConnectionSuggestions";
+import { ConnectionValidation } from "./ConnectionValidation";
+import { InteractiveTutorial } from "./InteractiveTutorial";
 import {
   WebScrapingNode,
   LLMNode,
@@ -34,7 +37,7 @@ import {
   DatabaseDeleteNode,
 } from "./nodes";
 import { NodeData } from "../types";
-import { Grid, Trash2, Sparkles, X } from "lucide-react";
+import { Grid, Trash2, Sparkles, X, Lightbulb, Play } from "lucide-react";
 
 const nodeTypes: NodeTypes = {
   webScraping: WebScrapingNode,
@@ -72,6 +75,12 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
   const edges = currentWorkflow?.edges || [];
   const [showConfig, setShowConfig] = useState(false);
   const [showCopilot, setShowCopilot] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [connectionSource, setConnectionSource] =
+    useState<Node<NodeData> | null>(null);
+  const [connectionTarget, setConnectionTarget] =
+    useState<Node<NodeData> | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
@@ -135,6 +144,68 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     },
     [selectNode]
   );
+
+  const handleConnectionStart = useCallback(
+    (event: React.MouseEvent | React.TouchEvent, params: any) => {
+      const node = nodes.find((n) => n.id === params.nodeId);
+      if (node) {
+        setConnectionSource(node as Node<NodeData>);
+      }
+    },
+    [nodes]
+  );
+
+  const handleConnectionEnd = useCallback(
+    (event: React.MouseEvent | React.TouchEvent, params: any) => {
+      if (connectionSource && params.nodeId) {
+        const node = nodes.find((n) => n.id === params.nodeId);
+        if (node) {
+          setConnectionTarget(node as Node<NodeData>);
+        }
+      }
+    },
+    [connectionSource, nodes]
+  );
+
+  const handleSuggestionClick = useCallback(
+    (suggestion: any) => {
+      const sourceNode = nodes.find((n) => n.id === suggestion.sourceId);
+      const targetNode = nodes.find((n) => n.id === suggestion.targetId);
+
+      if (sourceNode && targetNode) {
+        setConnectionSource(sourceNode as Node<NodeData>);
+        setConnectionTarget(targetNode as Node<NodeData>);
+      }
+    },
+    [nodes]
+  );
+
+  const handleValidateConnection = useCallback(
+    (sourceId: string, targetId: string) => {
+      const sourceNode = nodes.find((n) => n.id === sourceId);
+      const targetNode = nodes.find((n) => n.id === targetId);
+
+      if (sourceNode && targetNode) {
+        setConnectionSource(sourceNode as Node<NodeData>);
+        setConnectionTarget(targetNode as Node<NodeData>);
+      }
+    },
+    [nodes]
+  );
+
+  const handleConnectionAttempt = useCallback(
+    (sourceId: string, targetId: string) => {
+      addEdge(sourceId, targetId);
+      setConnectionSource(null);
+      setConnectionTarget(null);
+    },
+    [addEdge]
+  );
+
+  const handleClearConnection = useCallback(() => {
+    setConnectionSource(null);
+    setConnectionTarget(null);
+  }, []);
 
   const onPaneClick = useCallback(() => {
     selectNode(null);
@@ -208,140 +279,179 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
       <NodeLibrary />
 
       {/* Main Editor */}
-      <div className="flex-1 flex flex-col bg-white min-w-0">
-        <WorkflowToolbar />
+      <div className="flex-1 flex bg-white min-w-0">
+        <div className="flex-1 flex flex-col">
+          <WorkflowToolbar />
 
-        {/* Secondary Toolbar */}
-        <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => togglePanel("nodeLibrary")}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <Grid className="w-4 h-4" />
-              <span className="font-medium">
-                {panelStates.nodeLibrary.isCollapsed ? "Show" : "Hide"} Library
-              </span>
-            </button>
-
-            <button
-              onClick={() => setShowCopilot(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-700 rounded-lg hover:from-purple-100 hover:to-indigo-100 transition-colors border border-purple-200"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span className="font-medium">AI Copilot</span>
-            </button>
-
-            {selectedNodeId && (
+          {/* Secondary Toolbar */}
+          <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+            <div className="flex items-center space-x-4">
               <button
-                onClick={handleDeleteSelected}
-                className="flex items-center space-x-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
-                title="Delete selected node"
+                onClick={() => togglePanel("nodeLibrary")}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
               >
-                <Trash2 className="w-4 h-4" />
-                <span className="font-medium">Delete Node</span>
+                <Grid className="w-4 h-4" />
+                <span className="font-medium">
+                  {panelStates.nodeLibrary.isCollapsed ? "Show" : "Hide"}{" "}
+                  Library
+                </span>
               </button>
-            )}
-          </div>
 
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>{nodes.length} nodes</span>
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>{edges.length} connections</span>
+              <button
+                onClick={() => setShowCopilot(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-700 rounded-lg hover:from-purple-100 hover:to-indigo-100 transition-colors border border-purple-200"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="font-medium">AI Copilot</span>
+              </button>
+
+              <button
+                onClick={() => setShowSuggestions(!showSuggestions)}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  showSuggestions
+                    ? "bg-blue-100 text-blue-700 border border-blue-200"
+                    : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <Lightbulb className="w-4 h-4" />
+                <span className="font-medium">
+                  {showSuggestions ? "Hide" : "Show"} Suggestions
+                </span>
+              </button>
+
+              <button
+                onClick={() => setShowTutorial(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors border border-green-200"
+              >
+                <Play className="w-4 h-4" />
+                <span className="font-medium">Tutorial</span>
+              </button>
+
+              {selectedNodeId && (
+                <button
+                  onClick={handleDeleteSelected}
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+                  title="Delete selected node"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span className="font-medium">Delete Node</span>
+                </button>
+              )}
             </div>
 
-            <div className="w-px h-6 bg-gray-200"></div>
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span>{nodes.length} nodes</span>
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>{edges.length} connections</span>
+              </div>
 
-            <button
-              onClick={onClose}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+              <div className="w-px h-6 bg-gray-200"></div>
+
+              <button
+                onClick={onClose}
+                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+                <span className="font-medium">Close</span>
+              </button>
+            </div>
+          </div>
+
+          {/* React Flow */}
+          <div className="flex-1 relative min-h-0" ref={reactFlowWrapper}>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+              onNodesDelete={onNodesDelete}
+              onEdgesDelete={onEdgesDelete}
+              onInit={onInit}
+              nodeTypes={nodeTypes}
+              fitView
+              fitViewOptions={{
+                padding: 0.1,
+                includeHiddenNodes: false,
+                minZoom: 0.1,
+                maxZoom: 2,
+              }}
+              attributionPosition="bottom-left"
+              className="bg-gradient-to-br from-gray-50 to-blue-50/30"
+              minZoom={0.1}
+              maxZoom={2}
             >
-              <X className="w-4 h-4" />
-              <span className="font-medium">Close</span>
-            </button>
+              <Controls
+                className="!bg-white !border !border-gray-200 !rounded-lg !shadow-lg !p-1"
+                position="top-right"
+                showInteractive={false}
+              />
+              <MiniMap
+                className="!bg-white !border !border-gray-200 !rounded-lg !shadow-lg"
+                position="bottom-right"
+                nodeColor={(node) => {
+                  switch (node.type) {
+                    case "dataInput":
+                      return "#3b82f6";
+                    case "webScraping":
+                      return "#10b981";
+                    case "llmTask":
+                      return "#8b5cf6";
+                    case "dataOutput":
+                      return "#f59e0b";
+                    case "databaseQuery":
+                    case "databaseInsert":
+                    case "databaseUpdate":
+                    case "databaseDelete":
+                      return "#06b6d4";
+                    case "embeddingGenerator":
+                      return "#f59e0b";
+                    case "similaritySearch":
+                      return "#f97316";
+                    case "structuredOutput":
+                      return "#8b5cf6";
+                    default:
+                      return "#6b7280";
+                  }
+                }}
+                nodeStrokeWidth={2}
+                nodeBorderRadius={4}
+                maskColor="rgba(0, 0, 0, 0.1)"
+                style={{
+                  width: 200,
+                  height: 120,
+                }}
+              />
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={16}
+                size={1}
+                color="#e5e7eb"
+                className="opacity-60"
+              />
+            </ReactFlow>
           </div>
         </div>
 
-        {/* React Flow */}
-        <div className="flex-1 relative min-h-0" ref={reactFlowWrapper}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            onPaneClick={onPaneClick}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-            onNodesDelete={onNodesDelete}
-            onEdgesDelete={onEdgesDelete}
-            onInit={onInit}
-            nodeTypes={nodeTypes}
-            fitView
-            fitViewOptions={{
-              padding: 0.1,
-              includeHiddenNodes: false,
-              minZoom: 0.1,
-              maxZoom: 2,
-            }}
-            attributionPosition="bottom-left"
-            className="bg-gradient-to-br from-gray-50 to-blue-50/30"
-            minZoom={0.1}
-            maxZoom={2}
-          >
-            <Controls
-              className="!bg-white !border !border-gray-200 !rounded-lg !shadow-lg !p-1"
-              position="top-right"
-              showInteractive={false}
-            />
-            <MiniMap
-              className="!bg-white !border !border-gray-200 !rounded-lg !shadow-lg"
-              position="bottom-right"
-              nodeColor={(node) => {
-                switch (node.type) {
-                  case "dataInput":
-                    return "#3b82f6";
-                  case "webScraping":
-                    return "#10b981";
-                  case "llmTask":
-                    return "#8b5cf6";
-                  case "dataOutput":
-                    return "#f59e0b";
-                  case "databaseQuery":
-                  case "databaseInsert":
-                  case "databaseUpdate":
-                  case "databaseDelete":
-                    return "#06b6d4";
-                  case "embeddingGenerator":
-                    return "#f59e0b";
-                  case "similaritySearch":
-                    return "#f97316";
-                  case "structuredOutput":
-                    return "#8b5cf6";
-                  default:
-                    return "#6b7280";
-                }
-              }}
-              nodeStrokeWidth={2}
-              nodeBorderRadius={4}
-              maskColor="rgba(0, 0, 0, 0.1)"
-              style={{
-                width: 200,
-                height: 120,
-              }}
-            />
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={16}
-              size={1}
-              color="#e5e7eb"
-              className="opacity-60"
-            />
-          </ReactFlow>
-        </div>
+        {/* Connection Suggestions Panel */}
+        {showSuggestions && (
+          <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
+            <div className="p-4">
+              <ConnectionSuggestions
+                nodes={nodes}
+                edges={edges}
+                onSuggestionClick={handleSuggestionClick}
+                onValidateConnection={handleValidateConnection}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Node Configuration Modal */}
@@ -358,6 +468,24 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
       <CopilotPanel
         isOpen={showCopilot}
         onClose={() => setShowCopilot(false)}
+      />
+
+      {/* Connection Validation */}
+      <ConnectionValidation
+        sourceNode={connectionSource}
+        targetNode={connectionTarget}
+        existingEdges={edges}
+        onConnectionAttempt={handleConnectionAttempt}
+        onClear={handleClearConnection}
+      />
+
+      {/* Interactive Tutorial */}
+      <InteractiveTutorial
+        isOpen={showTutorial}
+        onClose={() => setShowTutorial(false)}
+        onComplete={() => setShowTutorial(false)}
+        workflowNodes={nodes}
+        workflowEdges={edges}
       />
     </div>
   );

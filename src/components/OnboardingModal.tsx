@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Eye,
   EyeOff,
+  Play,
 } from "lucide-react";
 import {
   Dialog,
@@ -24,11 +25,14 @@ import {
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { OnboardingManager } from "../utils/onboardingManager";
+import { InteractiveTutorial } from "./InteractiveTutorial";
 
 interface OnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete?: () => void;
+  workflowNodes?: any[];
+  workflowEdges?: any[];
 }
 
 const steps = [
@@ -205,6 +209,53 @@ const steps = [
           <p className="text-sm text-gray-600">
             Ready to build your first AI workflow?
           </p>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: 5,
+    title: "Try Interactive Tutorial",
+    description:
+      "Learn by doing! Follow our step-by-step tutorial to create your first workflow.",
+    icon: Play,
+    content: (
+      <div className="space-y-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Play className="w-8 h-8 text-white" />
+          </div>
+          <h4 className="font-medium text-gray-900 mb-2">
+            Interactive Tutorial
+          </h4>
+          <p className="text-sm text-gray-600">
+            We'll guide you through creating a complete workflow step by step.
+          </p>
+        </div>
+
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h4 className="font-medium text-green-900 mb-2">
+            What you'll learn:
+          </h4>
+          <ul className="text-sm text-green-800 space-y-1">
+            <li>• How to add and configure nodes</li>
+            <li>• How to connect nodes together</li>
+            <li>• How to test your workflow</li>
+            <li>• Best practices for workflow design</li>
+          </ul>
+        </div>
+
+        <div className="text-center">
+          <Button
+            size="lg"
+            className="bg-green-600 hover:bg-green-700"
+            onClick={() => {
+              OnboardingManager.markStepCompleted(5);
+            }}
+          >
+            <Play className="w-4 h-4 mr-2" />
+            Start Tutorial
+          </Button>
         </div>
       </div>
     ),

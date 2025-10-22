@@ -1,9 +1,12 @@
 {
   "workflows": [
     {
-      "id": "demo-web-scraping-analysis",
-      "name": "Web Scraping + AI Analysis",
-      "description": "A complete workflow that scrapes a website and analyzes the content with AI",
+      "id": "email-marketing-campaign",
+      "name": "Email Marketing Campaign Builder",
+      "description": "Create personalized email campaigns by analyzing customer data and generating targeted content",
+      "category": "Marketing",
+      "difficulty": "Beginner",
+      "estimatedTime": "5 minutes",
       "nodes": [
         {
           "id": "input-1",
@@ -12,11 +15,473 @@
           "data": {
             "id": "input-1",
             "type": "dataInput",
-            "label": "Website URL",
+            "label": "Customer List",
+            "status": "idle",
+            "config": {
+              "dataType": "csv",
+              "defaultValue": "Name,Email,Interests,LastPurchase\nJohn Doe,john@example.com,Technology,2024-01-15\nJane Smith,jane@example.com,Fashion,2024-01-10"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "llm-1",
+          "type": "llmTask",
+          "position": { "x": 300, "y": 100 },
+          "data": {
+            "id": "llm-1",
+            "type": "llmTask",
+            "label": "Email Content Generator",
+            "status": "idle",
+            "config": {
+              "prompt": "Create a personalized email campaign for each customer based on their interests and purchase history. Include:\n1. Personalized greeting\n2. Product recommendations based on their interests\n3. Special offers\n4. Call-to-action\n\nCustomer data: {{Customer List.output}}",
+              "model": "deepseek-chat",
+              "temperature": 0.8,
+              "maxTokens": 1000
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "output-1",
+          "type": "dataOutput",
+          "position": { "x": 500, "y": 100 },
+          "data": {
+            "id": "output-1",
+            "type": "dataOutput",
+            "label": "Email Campaigns",
+            "status": "idle",
+            "config": {
+              "format": "csv",
+              "filename": "email_campaigns.csv"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-1",
+          "source": "input-1",
+          "target": "llm-1"
+        },
+        {
+          "id": "edge-2",
+          "source": "llm-1",
+          "target": "output-1"
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "social-media-content",
+      "name": "Social Media Content Generator",
+      "description": "Generate engaging social media posts by analyzing trending topics and creating relevant content",
+      "category": "Marketing",
+      "difficulty": "Beginner",
+      "estimatedTime": "3 minutes",
+      "nodes": [
+        {
+          "id": "input-1",
+          "type": "dataInput",
+          "position": { "x": 100, "y": 100 },
+          "data": {
+            "id": "input-1",
+            "type": "dataInput",
+            "label": "Brand Information",
+            "status": "idle",
+            "config": {
+              "dataType": "text",
+              "defaultValue": "Brand: EcoFriendly Products\nIndustry: Sustainable Living\nTarget Audience: Environmentally conscious consumers\nKey Messages: Sustainability, Quality, Affordability"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "llm-1",
+          "type": "llmTask",
+          "position": { "x": 300, "y": 100 },
+          "data": {
+            "id": "llm-1",
+            "type": "llmTask",
+            "label": "Content Creator",
+            "status": "idle",
+            "config": {
+              "prompt": "Create 5 engaging social media posts for the following brand. Make them:\n- Platform-appropriate (Twitter, Instagram, LinkedIn)\n- Engaging and shareable\n- Include relevant hashtags\n- Match the brand voice\n\nBrand info: {{Brand Information.output}}",
+              "model": "deepseek-chat",
+              "temperature": 0.9,
+              "maxTokens": 800
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "output-1",
+          "type": "dataOutput",
+          "position": { "x": 500, "y": 100 },
+          "data": {
+            "id": "output-1",
+            "type": "dataOutput",
+            "label": "Social Media Posts",
+            "status": "idle",
+            "config": {
+              "format": "json",
+              "filename": "social_media_posts.json"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-1",
+          "source": "input-1",
+          "target": "llm-1"
+        },
+        {
+          "id": "edge-2",
+          "source": "llm-1",
+          "target": "output-1"
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "customer-support-analyzer",
+      "name": "Customer Support Ticket Analyzer",
+      "description": "Analyze customer support tickets to identify common issues and generate response suggestions",
+      "category": "Customer Service",
+      "difficulty": "Intermediate",
+      "estimatedTime": "7 minutes",
+      "nodes": [
+        {
+          "id": "input-1",
+          "type": "dataInput",
+          "position": { "x": 100, "y": 100 },
+          "data": {
+            "id": "input-1",
+            "type": "dataInput",
+            "label": "Support Tickets",
+            "status": "idle",
+            "config": {
+              "dataType": "csv",
+              "defaultValue": "Ticket ID,Subject,Description,Priority\nT001,Login Issues,User cannot access account,High\nT002,Payment Problem,Charged twice for subscription,High\nT003,Feature Request,Need dark mode option,Medium"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "llm-1",
+          "type": "llmTask",
+          "position": { "x": 300, "y": 100 },
+          "data": {
+            "id": "llm-1",
+            "type": "llmTask",
+            "label": "Issue Analyzer",
+            "status": "idle",
+            "config": {
+              "prompt": "Analyze these customer support tickets and provide:\n1. Common issue categories\n2. Priority level assessment\n3. Suggested response templates\n4. Recommended actions\n\nTickets: {{Support Tickets.output}}",
+              "model": "deepseek-chat",
+              "temperature": 0.3,
+              "maxTokens": 1200
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "output-1",
+          "type": "dataOutput",
+          "position": { "x": 500, "y": 100 },
+          "data": {
+            "id": "output-1",
+            "type": "dataOutput",
+            "label": "Analysis Report",
+            "status": "idle",
+            "config": {
+              "format": "json",
+              "filename": "support_analysis.json"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-1",
+          "source": "input-1",
+          "target": "llm-1"
+        },
+        {
+          "id": "edge-2",
+          "source": "llm-1",
+          "target": "output-1"
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "invoice-data-extractor",
+      "name": "Invoice Data Extractor",
+      "description": "Extract key information from invoices and organize it into structured data",
+      "category": "Finance",
+      "difficulty": "Intermediate",
+      "estimatedTime": "6 minutes",
+      "nodes": [
+        {
+          "id": "input-1",
+          "type": "dataInput",
+          "position": { "x": 100, "y": 100 },
+          "data": {
+            "id": "input-1",
+            "type": "dataInput",
+            "label": "Invoice Text",
+            "status": "idle",
+            "config": {
+              "dataType": "text",
+              "defaultValue": "INVOICE #12345\nDate: 2024-01-15\nFrom: ABC Company\nTo: XYZ Corporation\nAmount: $1,250.00\nDue Date: 2024-02-15\nDescription: Web Development Services"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "llm-1",
+          "type": "llmTask",
+          "position": { "x": 300, "y": 100 },
+          "data": {
+            "id": "llm-1",
+            "type": "llmTask",
+            "label": "Data Extractor",
+            "status": "idle",
+            "config": {
+              "prompt": "Extract the following information from this invoice and format it as JSON:\n- Invoice Number\n- Date\n- From (Vendor)\n- To (Customer)\n- Amount\n- Due Date\n- Description\n- Tax Amount (if mentioned)\n- Total Amount\n\nInvoice text: {{Invoice Text.output}}",
+              "model": "deepseek-chat",
+              "temperature": 0.1,
+              "maxTokens": 500
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "output-1",
+          "type": "dataOutput",
+          "position": { "x": 500, "y": 100 },
+          "data": {
+            "id": "output-1",
+            "type": "dataOutput",
+            "label": "Extracted Data",
+            "status": "idle",
+            "config": {
+              "format": "json",
+              "filename": "invoice_data.json"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-1",
+          "source": "input-1",
+          "target": "llm-1"
+        },
+        {
+          "id": "edge-2",
+          "source": "llm-1",
+          "target": "output-1"
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "resume-analyzer",
+      "name": "Resume Parser & Analyzer",
+      "description": "Parse resume information and analyze skills, experience, and qualifications",
+      "category": "HR",
+      "difficulty": "Intermediate",
+      "estimatedTime": "8 minutes",
+      "nodes": [
+        {
+          "id": "input-1",
+          "type": "dataInput",
+          "position": { "x": 100, "y": 100 },
+          "data": {
+            "id": "input-1",
+            "type": "dataInput",
+            "label": "Resume Text",
+            "status": "idle",
+            "config": {
+              "dataType": "text",
+              "defaultValue": "John Smith\nSoftware Engineer\nEmail: john@example.com\nPhone: (555) 123-4567\n\nExperience:\n- Senior Developer at TechCorp (2020-2024)\n- Junior Developer at StartupXYZ (2018-2020)\n\nSkills: JavaScript, Python, React, Node.js, AWS\nEducation: BS Computer Science, University of Tech (2018)"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "llm-1",
+          "type": "llmTask",
+          "position": { "x": 300, "y": 100 },
+          "data": {
+            "id": "llm-1",
+            "type": "llmTask",
+            "label": "Resume Analyzer",
+            "status": "idle",
+            "config": {
+              "prompt": "Analyze this resume and extract:\n1. Contact Information\n2. Work Experience (with years)\n3. Skills (categorized by type)\n4. Education\n5. Years of Experience\n6. Key Achievements\n7. Missing Information\n8. Overall Assessment\n\nFormat as structured JSON.\n\nResume: {{Resume Text.output}}",
+              "model": "deepseek-chat",
+              "temperature": 0.2,
+              "maxTokens": 1000
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "output-1",
+          "type": "dataOutput",
+          "position": { "x": 500, "y": 100 },
+          "data": {
+            "id": "output-1",
+            "type": "dataOutput",
+            "label": "Resume Analysis",
+            "status": "idle",
+            "config": {
+              "format": "json",
+              "filename": "resume_analysis.json"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-1",
+          "source": "input-1",
+          "target": "llm-1"
+        },
+        {
+          "id": "edge-2",
+          "source": "llm-1",
+          "target": "output-1"
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "product-description-generator",
+      "name": "Product Description Generator",
+      "description": "Generate compelling product descriptions for e-commerce based on product features",
+      "category": "E-commerce",
+      "difficulty": "Beginner",
+      "estimatedTime": "4 minutes",
+      "nodes": [
+        {
+          "id": "input-1",
+          "type": "dataInput",
+          "position": { "x": 100, "y": 100 },
+          "data": {
+            "id": "input-1",
+            "type": "dataInput",
+            "label": "Product Features",
+            "status": "idle",
+            "config": {
+              "dataType": "text",
+              "defaultValue": "Product: Wireless Bluetooth Headphones\nFeatures: Noise-canceling, 30-hour battery life, water-resistant, premium sound quality, comfortable ear cushions, built-in microphone\nPrice: $199.99\nTarget Audience: Music lovers, professionals, commuters"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "llm-1",
+          "type": "llmTask",
+          "position": { "x": 300, "y": 100 },
+          "data": {
+            "id": "llm-1",
+            "type": "llmTask",
+            "label": "Description Writer",
+            "status": "idle",
+            "config": {
+              "prompt": "Create compelling product descriptions for e-commerce including:\n1. Main product description (2-3 paragraphs)\n2. Key features list (bullet points)\n3. Benefits for the customer\n4. SEO-optimized title\n5. Meta description\n6. Call-to-action phrases\n\nProduct info: {{Product Features.output}}",
+              "model": "deepseek-chat",
+              "temperature": 0.7,
+              "maxTokens": 800
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "output-1",
+          "type": "dataOutput",
+          "position": { "x": 500, "y": 100 },
+          "data": {
+            "id": "output-1",
+            "type": "dataOutput",
+            "label": "Product Descriptions",
+            "status": "idle",
+            "config": {
+              "format": "json",
+              "filename": "product_descriptions.json"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-1",
+          "source": "input-1",
+          "target": "llm-1"
+        },
+        {
+          "id": "edge-2",
+          "source": "llm-1",
+          "target": "output-1"
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "news-summarizer",
+      "name": "News Article Summarizer",
+      "description": "Scrape news articles and create concise summaries with key points",
+      "category": "Content",
+      "difficulty": "Intermediate",
+      "estimatedTime": "6 minutes",
+      "nodes": [
+        {
+          "id": "input-1",
+          "type": "dataInput",
+          "position": { "x": 100, "y": 100 },
+          "data": {
+            "id": "input-1",
+            "type": "dataInput",
+            "label": "News URL",
             "status": "idle",
             "config": {
               "dataType": "url",
-              "defaultValue": "https://example.com"
+              "defaultValue": "https://example-news.com/article"
             },
             "inputs": [],
             "outputs": []
@@ -29,12 +494,13 @@
           "data": {
             "id": "scraper-1",
             "type": "webScraping",
-            "label": "Web Scraper",
+            "label": "Article Scraper",
             "status": "idle",
             "config": {
-              "url": "{{Website URL.output}}",
-              "formats": ["markdown", "html"],
-              "maxLength": 2000
+              "url": "{{News URL.output}}",
+              "formats": ["markdown"],
+              "onlyMainContent": true,
+              "maxLength": 3000
             },
             "inputs": [],
             "outputs": []
@@ -47,13 +513,13 @@
           "data": {
             "id": "llm-1",
             "type": "llmTask",
-            "label": "Content Analyzer",
+            "label": "News Summarizer",
             "status": "idle",
             "config": {
-              "prompt": "Analyze the following web content and provide a summary:\n\n{{Web Scraper.output}}",
+              "prompt": "Summarize this news article in a clear, concise way. Include:\n1. Main headline\n2. Key points (3-5 bullet points)\n3. Important quotes\n4. Impact or significance\n5. Related topics\n\nArticle: {{Article Scraper.output}}",
               "model": "deepseek-chat",
-              "temperature": 0.7,
-              "maxTokens": 500
+              "temperature": 0.3,
+              "maxTokens": 600
             },
             "inputs": [],
             "outputs": []
@@ -66,11 +532,11 @@
           "data": {
             "id": "output-1",
             "type": "dataOutput",
-            "label": "Analysis Result",
+            "label": "News Summary",
             "status": "idle",
             "config": {
               "format": "json",
-              "filename": "analysis_result.json"
+              "filename": "news_summary.json"
             },
             "inputs": [],
             "outputs": []
@@ -98,74 +564,61 @@
       "updatedAt": "2024-01-01T00:00:00.000Z"
     },
     {
-      "id": "demo-embedding-search",
-      "name": "Document Embedding & Search",
-      "description": "Create embeddings from documents and perform similarity search",
+      "id": "meeting-notes-generator",
+      "name": "Meeting Notes Generator",
+      "description": "Transform meeting transcripts into structured notes with action items and key decisions",
+      "category": "Productivity",
+      "difficulty": "Beginner",
+      "estimatedTime": "5 minutes",
       "nodes": [
         {
-          "id": "input-2",
+          "id": "input-1",
           "type": "dataInput",
-          "position": { "x": 100, "y": 200 },
+          "position": { "x": 100, "y": 100 },
           "data": {
-            "id": "input-2",
+            "id": "input-1",
             "type": "dataInput",
-            "label": "Document Text",
+            "label": "Meeting Transcript",
             "status": "idle",
             "config": {
               "dataType": "text",
-              "defaultValue": "This is a sample document about artificial intelligence and machine learning."
+              "defaultValue": "Meeting: Project Kickoff\nDate: 2024-01-15\nAttendees: John, Sarah, Mike\n\nJohn: Let's discuss the new website project timeline.\nSarah: We need to complete the design by end of month.\nMike: I can handle the backend development.\nJohn: Great, I'll take care of the frontend.\nSarah: We should have a review meeting next week.\nMike: Agreed, let's schedule for Tuesday."
             },
             "inputs": [],
             "outputs": []
           }
         },
         {
-          "id": "embedding-1",
-          "type": "embeddingGenerator",
-          "position": { "x": 300, "y": 200 },
+          "id": "llm-1",
+          "type": "llmTask",
+          "position": { "x": 300, "y": 100 },
           "data": {
-            "id": "embedding-1",
-            "type": "embeddingGenerator",
-            "label": "Embedding Generator",
+            "id": "llm-1",
+            "type": "llmTask",
+            "label": "Notes Organizer",
             "status": "idle",
             "config": {
-              "model": "text-embedding-ada-002",
-              "dimensions": 1536
+              "prompt": "Convert this meeting transcript into structured meeting notes with:\n1. Meeting title and date\n2. Attendees list\n3. Key discussion points\n4. Decisions made\n5. Action items (who, what, when)\n6. Next steps\n7. Follow-up meetings\n\nFormat as clear, professional meeting notes.\n\nTranscript: {{Meeting Transcript.output}}",
+              "model": "deepseek-chat",
+              "temperature": 0.2,
+              "maxTokens": 800
             },
             "inputs": [],
             "outputs": []
           }
         },
         {
-          "id": "search-1",
-          "type": "similaritySearch",
-          "position": { "x": 500, "y": 200 },
-          "data": {
-            "id": "search-1",
-            "type": "similaritySearch",
-            "label": "Similarity Search",
-            "status": "idle",
-            "config": {
-              "vectorStore": "pinecone",
-              "topK": 5,
-              "threshold": 0.8
-            },
-            "inputs": [],
-            "outputs": []
-          }
-        },
-        {
-          "id": "output-2",
+          "id": "output-1",
           "type": "dataOutput",
-          "position": { "x": 700, "y": 200 },
+          "position": { "x": 500, "y": 100 },
           "data": {
-            "id": "output-2",
+            "id": "output-1",
             "type": "dataOutput",
-            "label": "Search Results",
+            "label": "Meeting Notes",
             "status": "idle",
             "config": {
-              "format": "json",
-              "filename": "search_results.json"
+              "format": "text",
+              "filename": "meeting_notes.txt"
             },
             "inputs": [],
             "outputs": []
@@ -174,19 +627,192 @@
       ],
       "edges": [
         {
-          "id": "edge-4",
-          "source": "input-2",
-          "target": "embedding-1"
+          "id": "edge-1",
+          "source": "input-1",
+          "target": "llm-1"
         },
         {
-          "id": "edge-5",
-          "source": "embedding-1",
-          "target": "search-1"
+          "id": "edge-2",
+          "source": "llm-1",
+          "target": "output-1"
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "competitor-analysis",
+      "name": "Competitor Analysis Tool",
+      "description": "Analyze competitor websites to extract pricing, features, and positioning information",
+      "category": "Business Intelligence",
+      "difficulty": "Advanced",
+      "estimatedTime": "10 minutes",
+      "nodes": [
+        {
+          "id": "input-1",
+          "type": "dataInput",
+          "position": { "x": 100, "y": 100 },
+          "data": {
+            "id": "input-1",
+            "type": "dataInput",
+            "label": "Competitor URLs",
+            "status": "idle",
+            "config": {
+              "dataType": "text",
+              "defaultValue": "https://competitor1.com\nhttps://competitor2.com\nhttps://competitor3.com"
+            },
+            "inputs": [],
+            "outputs": []
+          }
         },
         {
-          "id": "edge-6",
-          "source": "search-1",
-          "target": "output-2"
+          "id": "scraper-1",
+          "type": "webScraping",
+          "position": { "x": 300, "y": 100 },
+          "data": {
+            "id": "scraper-1",
+            "type": "webScraping",
+            "label": "Website Scraper",
+            "status": "idle",
+            "config": {
+              "url": "{{Competitor URLs.output}}",
+              "formats": ["markdown"],
+              "onlyMainContent": true,
+              "maxLength": 2000
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "llm-1",
+          "type": "llmTask",
+          "position": { "x": 500, "y": 100 },
+          "data": {
+            "id": "llm-1",
+            "type": "llmTask",
+            "label": "Competitor Analyzer",
+            "status": "idle",
+            "config": {
+              "prompt": "Analyze these competitor websites and extract:\n1. Pricing information\n2. Key features and benefits\n3. Target audience positioning\n4. Unique selling propositions\n5. Strengths and weaknesses\n6. Market positioning\n7. Recommendations for our strategy\n\nCompetitor data: {{Website Scraper.output}}",
+              "model": "deepseek-chat",
+              "temperature": 0.3,
+              "maxTokens": 1200
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "output-1",
+          "type": "dataOutput",
+          "position": { "x": 700, "y": 100 },
+          "data": {
+            "id": "output-1",
+            "type": "dataOutput",
+            "label": "Analysis Report",
+            "status": "idle",
+            "config": {
+              "format": "json",
+              "filename": "competitor_analysis.json"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-1",
+          "source": "input-1",
+          "target": "scraper-1"
+        },
+        {
+          "id": "edge-2",
+          "source": "scraper-1",
+          "target": "llm-1"
+        },
+        {
+          "id": "edge-3",
+          "source": "llm-1",
+          "target": "output-1"
+        }
+      ],
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "document-translator",
+      "name": "Multi-Language Document Translator",
+      "description": "Translate documents between multiple languages while preserving formatting and context",
+      "category": "Content",
+      "difficulty": "Beginner",
+      "estimatedTime": "4 minutes",
+      "nodes": [
+        {
+          "id": "input-1",
+          "type": "dataInput",
+          "position": { "x": 100, "y": 100 },
+          "data": {
+            "id": "input-1",
+            "type": "dataInput",
+            "label": "Document to Translate",
+            "status": "idle",
+            "config": {
+              "dataType": "text",
+              "defaultValue": "Welcome to our company! We are excited to introduce our new product line that will revolutionize the industry. Our team has worked tirelessly to bring you innovative solutions that meet your needs."
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "llm-1",
+          "type": "llmTask",
+          "position": { "x": 300, "y": 100 },
+          "data": {
+            "id": "llm-1",
+            "type": "llmTask",
+            "label": "Document Translator",
+            "status": "idle",
+            "config": {
+              "prompt": "Translate the following document into Spanish, French, and German. For each translation:\n1. Maintain the original tone and style\n2. Preserve any formatting\n3. Ensure cultural appropriateness\n4. Keep technical terms accurate\n\nDocument: {{Document to Translate.output}}",
+              "model": "deepseek-chat",
+              "temperature": 0.3,
+              "maxTokens": 1000
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "id": "output-1",
+          "type": "dataOutput",
+          "position": { "x": 500, "y": 100 },
+          "data": {
+            "id": "output-1",
+            "type": "dataOutput",
+            "label": "Translated Documents",
+            "status": "idle",
+            "config": {
+              "format": "json",
+              "filename": "translations.json"
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-1",
+          "source": "input-1",
+          "target": "llm-1"
+        },
+        {
+          "id": "edge-2",
+          "source": "llm-1",
+          "target": "output-1"
         }
       ],
       "createdAt": "2024-01-01T00:00:00.000Z",
