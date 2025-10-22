@@ -84,7 +84,6 @@ export default async function databaseProcessor(
       description: `Failed ${context.nodeType} operation`,
       executionTime,
       metadata: {
-        operation: context.nodeType,
         executionTime,
       },
     };

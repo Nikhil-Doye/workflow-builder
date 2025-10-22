@@ -34,8 +34,6 @@ export const NodeLibrary: React.FC = () => {
   const isCollapsed = panelStates.nodeLibrary.isCollapsed;
   const isHidden = panelStates.nodeLibrary.isHidden;
 
-  if (isHidden) return null;
-
   const nodeTypesList = [
     {
       type: "dataInput",
@@ -159,20 +157,6 @@ export const NodeLibrary: React.FC = () => {
         nodeType.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const getColorClasses = (color: string) => {
-    const colorMap: Record<string, string> = {
-      blue: "border-blue-200 bg-blue-50 hover:bg-blue-100",
-      green: "border-green-200 bg-green-50 hover:bg-green-100",
-      purple: "border-purple-200 bg-purple-50 hover:bg-purple-100",
-      yellow: "border-yellow-200 bg-yellow-50 hover:bg-yellow-100",
-      orange: "border-orange-200 bg-orange-50 hover:bg-orange-100",
-      indigo: "border-indigo-200 bg-indigo-50 hover:bg-indigo-100",
-      gray: "border-gray-200 bg-gray-50 hover:bg-gray-100",
-      cyan: "border-cyan-200 bg-cyan-50 hover:bg-cyan-100",
-    };
-    return colorMap[color] || "border-gray-200 bg-gray-50 hover:bg-gray-100";
-  };
-
   // Accessibility functions
   const announceToScreenReader = useCallback((message: string) => {
     setAnnouncement(message);
@@ -285,6 +269,20 @@ export const NodeLibrary: React.FC = () => {
     setFocusedNodeIndex(-1);
   }, [searchQuery, selectedCategory]);
 
+  const getColorClasses = (color: string) => {
+    const colorMap: Record<string, string> = {
+      blue: "border-blue-200 bg-blue-50 hover:bg-blue-100",
+      green: "border-green-200 bg-green-50 hover:bg-green-100",
+      purple: "border-purple-200 bg-purple-50 hover:bg-purple-100",
+      yellow: "border-yellow-200 bg-yellow-50 hover:bg-yellow-100",
+      orange: "border-orange-200 bg-orange-50 hover:bg-orange-100",
+      indigo: "border-indigo-200 bg-indigo-50 hover:bg-indigo-100",
+      gray: "border-gray-200 bg-gray-50 hover:bg-gray-100",
+      cyan: "border-cyan-200 bg-cyan-50 hover:bg-cyan-100",
+    };
+    return colorMap[color] || "border-gray-200 bg-gray-50 hover:bg-gray-100";
+  };
+
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData("application/reactflow", nodeType);
     event.dataTransfer.effectAllowed = "move";
@@ -296,6 +294,8 @@ export const NodeLibrary: React.FC = () => {
       `Selected ${nodeType.label}. Use mouse to drag to canvas or press Enter to add.`
     );
   };
+
+  if (isHidden) return null;
 
   return (
     <>

@@ -80,6 +80,8 @@ export function generateWorkflowStructure(
   const positionedNodes = calculateNodePositions(nodes, topology);
 
   return {
+    id: `workflow-${Date.now()}`,
+    name: `Generated Workflow - ${intent}`,
     nodes: positionedNodes,
     edges,
     topology,
@@ -117,6 +119,7 @@ export function generateMixedWorkflowStructure(
   const nodes = subIntents.map((intent, index) => {
     const nodeConfig = generateNodeConfigForIntent(intent, userInput, index);
     return {
+      id: `node-${index}`,
       type: mapIntentToNodeType(intent),
       label: generateNodeLabel(intent, index),
       config: nodeConfig,
@@ -133,6 +136,8 @@ export function generateMixedWorkflowStructure(
   const positionedNodes = calculateNodePositions(enhancedNodes, topology);
 
   return {
+    id: `mixed-workflow-${Date.now()}`,
+    name: `Mixed Workflow - ${subIntents.join(", ")}`,
     nodes: positionedNodes,
     edges,
     topology,
@@ -237,6 +242,7 @@ function generateNodeSequence(
 
   // Always start with data input
   nodes.push({
+    id: "input-node",
     type: "dataInput",
     label: "Data Input",
     config: {
@@ -254,6 +260,7 @@ function generateNodeSequence(
     inputDataType !== "pdf"
   ) {
     nodes.push({
+      id: "web-scraper",
       type: "webScraping",
       label: "Web Scraper",
       config: {
@@ -271,6 +278,7 @@ function generateNodeSequence(
     inputDataType === "pdf"
   ) {
     nodes.push({
+      id: "ai-analyzer",
       type: "llmTask",
       label: "AI Analyzer",
       config: {
@@ -283,6 +291,7 @@ function generateNodeSequence(
 
   if (intent === "DATA_PROCESSING" || entities.dataTypes?.length > 0) {
     nodes.push({
+      id: "data-processor",
       type: "structuredOutput",
       label: "Data Processor",
       config: {
@@ -294,6 +303,7 @@ function generateNodeSequence(
 
   if (intent === "SEARCH_AND_RETRIEVAL") {
     nodes.push({
+      id: "similarity-search",
       type: "similaritySearch",
       label: "Similarity Search",
       config: {
@@ -308,6 +318,7 @@ function generateNodeSequence(
   if (inputDataType === "pdf" && nodes.length === 1) {
     // Only data input node exists, add a default AI analyzer
     nodes.push({
+      id: "pdf-analyzer",
       type: "llmTask",
       label: "PDF Analyzer",
       config: {
@@ -320,6 +331,7 @@ function generateNodeSequence(
 
   // Always end with data output
   nodes.push({
+    id: "data-output",
     type: "dataOutput",
     label: "Data Output",
     config: {
@@ -344,8 +356,9 @@ function generateEdges(
     // Simple linear connection
     for (let i = 0; i < nodes.length - 1; i++) {
       edges.push({
-        source: `node-${i}`,
-        target: `node-${i + 1}`,
+        id: `edge-${i + 1}`,
+        source: nodes[i].id,
+        target: nodes[i + 1].id,
       });
     }
   } else if (topology.type === "fork-join") {
@@ -355,16 +368,18 @@ function generateEdges(
     // Connect input to all processing nodes
     processingNodes.forEach((_, index) => {
       edges.push({
-        source: `node-0`,
-        target: `node-${index + 1}`,
+        id: `edge-input-${index + 1}`,
+        source: nodes[0].id,
+        target: nodes[index + 1].id,
       });
     });
 
     // Connect all processing nodes to output
     processingNodes.forEach((_, index) => {
       edges.push({
-        source: `node-${index + 1}`,
-        target: `node-${nodes.length - 1}`,
+        id: `edge-output-${index + 1}`,
+        source: nodes[index + 1].id,
+        target: nodes[nodes.length - 1].id,
       });
     });
   }
@@ -440,6 +455,7 @@ function ensureInputOutputNodes(
 
   if (!hasInput) {
     enhancedNodes.unshift({
+      id: "input-node",
       type: "dataInput",
       label: "Data Input",
       config: {
@@ -451,6 +467,7 @@ function ensureInputOutputNodes(
 
   if (!hasOutput) {
     enhancedNodes.push({
+      id: "output-node",
       type: "dataOutput",
       label: "Data Output",
       config: {

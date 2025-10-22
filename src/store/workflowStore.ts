@@ -949,13 +949,17 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
     // Convert current workflow to WorkflowStructure format for validation
     const workflowStructure: WorkflowStructure = {
+      id: currentWorkflow.id,
+      name: currentWorkflow.name,
       nodes: currentWorkflow.nodes.map((node) => ({
+        id: node.id,
         type: node.type,
         label: node.data.label,
         config: node.data.config,
         position: node.position,
       })),
       edges: currentWorkflow.edges.map((edge) => ({
+        id: edge.id,
         source: edge.source,
         target: edge.target,
         sourceHandle: edge.sourceHandle,

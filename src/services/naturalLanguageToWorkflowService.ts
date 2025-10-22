@@ -881,8 +881,11 @@ Respond with valid JSON only:
   private fallbackParsing(userInput: string): ParsedIntent {
     // Create a simple workflow as fallback
     const workflowStructure: WorkflowStructure = {
+      id: "fallback-workflow",
+      name: "Fallback Workflow",
       nodes: [
         {
+          id: "input-node",
           type: "dataInput",
           label: "Input Data",
           config: {
@@ -891,6 +894,7 @@ Respond with valid JSON only:
           },
         },
         {
+          id: "ai-processor",
           type: "llmTask",
           label: "AI Processor",
           config: {
@@ -900,6 +904,7 @@ Respond with valid JSON only:
           },
         },
         {
+          id: "output-result",
           type: "dataOutput",
           label: "Output Result",
           config: {
@@ -909,8 +914,8 @@ Respond with valid JSON only:
         },
       ],
       edges: [
-        { source: "node-0", target: "node-1" },
-        { source: "node-1", target: "node-2" },
+        { id: "edge-1", source: "input-node", target: "ai-processor" },
+        { id: "edge-2", source: "ai-processor", target: "output-result" },
       ],
       topology: {
         type: "linear",
@@ -945,6 +950,7 @@ Respond with valid JSON only:
   ): WorkflowStructure {
     const nodes: any[] = [
       {
+        id: "input-node",
         type: "dataInput",
         label: "Input Data",
         config: {
@@ -957,6 +963,7 @@ Respond with valid JSON only:
     // Add processing nodes based on intent
     if (intent.intent === "WEB_SCRAPING" || entities.urls.length > 0) {
       nodes.push({
+        id: "web-scraper",
         type: "webScraping",
         label: "Web Scraper",
         config: {
@@ -969,6 +976,7 @@ Respond with valid JSON only:
 
     if (intent.intent === "AI_ANALYSIS" || entities.aiTasks.length > 0) {
       nodes.push({
+        id: "ai-analyzer",
         type: "llmTask",
         label: "AI Analyzer",
         config: {
@@ -981,6 +989,7 @@ Respond with valid JSON only:
 
     // Always add output node
     nodes.push({
+      id: "data-output",
       type: "dataOutput",
       label: "Data Output",
       config: {
@@ -993,12 +1002,15 @@ Respond with valid JSON only:
     const edges = [];
     for (let i = 0; i < nodes.length - 1; i++) {
       edges.push({
-        source: `node-${i}`,
-        target: `node-${i + 1}`,
+        id: `edge-${i + 1}`,
+        source: nodes[i].id,
+        target: nodes[i + 1].id,
       });
     }
 
     return {
+      id: "generated-workflow",
+      name: "Generated Workflow",
       nodes,
       edges,
       topology: {

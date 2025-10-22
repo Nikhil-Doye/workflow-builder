@@ -123,6 +123,8 @@ export interface ParsedIntent {
 }
 
 export interface WorkflowStructure {
+  id: string;
+  name: string;
   nodes: WorkflowNodeStructure[];
   edges: WorkflowEdgeStructure[];
   topology: WorkflowTopology;
@@ -132,6 +134,7 @@ export interface WorkflowStructure {
 }
 
 export interface WorkflowNodeStructure {
+  id: string;
   type: string;
   label: string;
   config: Record<string, any>;
@@ -139,6 +142,7 @@ export interface WorkflowNodeStructure {
 }
 
 export interface WorkflowEdgeStructure {
+  id: string;
   source: string;
   target: string;
   sourceHandle?: string;

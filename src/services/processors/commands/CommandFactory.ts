@@ -15,14 +15,20 @@ export class CommandRegistry {
     new (config: Record<string, any>) => DatabaseCommand
   > = new Map();
 
-  static {
+  private static initialized = false;
+
+  private static initialize() {
+    if (this.initialized) return;
+
     // Register default commands
-    CommandRegistry.register("databaseQuery", QueryCommand);
-    CommandRegistry.register("databaseInsert", InsertCommand);
-    CommandRegistry.register("databaseUpdate", UpdateCommand);
-    CommandRegistry.register("databaseDelete", DeleteCommand);
-    CommandRegistry.register("databaseAggregate", AggregateCommand);
-    CommandRegistry.register("databaseTransaction", TransactionCommand);
+    this.register("databaseQuery", QueryCommand);
+    this.register("databaseInsert", InsertCommand);
+    this.register("databaseUpdate", UpdateCommand);
+    this.register("databaseDelete", DeleteCommand);
+    this.register("databaseAggregate", AggregateCommand);
+    this.register("databaseTransaction", TransactionCommand);
+
+    this.initialized = true;
   }
 
   /**
@@ -32,6 +38,7 @@ export class CommandRegistry {
     operationType: string,
     commandClass: new (config: Record<string, any>) => DatabaseCommand
   ): void {
+    this.initialize();
     this.commands.set(operationType, commandClass);
   }
 
@@ -40,7 +47,8 @@ export class CommandRegistry {
    */
   static getCommandClass(
     operationType: string
-  ): new (config: Record<string, any>) => DatabaseCommand | undefined {
+  ): (new (config: Record<string, any>) => DatabaseCommand) | undefined {
+    this.initialize();
     return this.commands.get(operationType);
   }
 
@@ -48,6 +56,7 @@ export class CommandRegistry {
    * Get all registered command types
    */
   static getRegisteredTypes(): string[] {
+    this.initialize();
     return Array.from(this.commands.keys());
   }
 
@@ -55,6 +64,7 @@ export class CommandRegistry {
    * Check if a command type is registered
    */
   static hasCommand(operationType: string): boolean {
+    this.initialize();
     return this.commands.has(operationType);
   }
 }

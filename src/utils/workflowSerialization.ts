@@ -48,7 +48,7 @@ export const importWorkflowWithValidation = (
   } = {}
 ): {
   workflow: Workflow | null;
-  result: import(".").WorkflowImportResult | null;
+  result: import("./workflowImportHelper").WorkflowImportResult | null;
 } => {
   try {
     const data = JSON.parse(jsonString);
@@ -71,8 +71,8 @@ export const importWorkflowWithValidation = (
         id: node.id,
         type: node.type,
         label: node.data?.label || node.label || node.id,
-        position: node.position || { x: 0, y: 0 },
         config: node.data?.config || node.config || {},
+        position: node.position || { x: 0, y: 0 },
       })),
       edges: data.edges.map((edge: any) => ({
         id: edge.id,
@@ -81,6 +81,11 @@ export const importWorkflowWithValidation = (
         sourceHandle: edge.sourceHandle,
         targetHandle: edge.targetHandle,
       })),
+      topology: {
+        type: "linear",
+        description: "Sequential processing",
+        parallelExecution: false,
+      },
       complexity: data.complexity || "medium",
       estimatedExecutionTime: data.estimatedExecutionTime || 0,
     };
