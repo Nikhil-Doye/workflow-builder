@@ -247,7 +247,7 @@ export const NodeLibrary: React.FC = () => {
 
       <aside
         className={`bg-white border-r border-gray-200 flex flex-col shadow-lg transition-all duration-300 ${
-          isCollapsed ? "w-16" : "w-64 lg:w-72"
+          isCollapsed ? "w-16" : "w-80 lg:w-96"
         }`}
         aria-label="Node Library"
       >
@@ -490,23 +490,27 @@ export const NodeLibrary: React.FC = () => {
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm font-medium truncate">
-                                {config.userFriendlyName}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                ({config.technicalName})
-                              </span>
-                              <span
-                                className="text-xs px-1.5 py-0.5 bg-white/60 rounded-full"
-                                aria-label={`Category: ${config.category}`}
-                              >
-                                {config.category}
-                              </span>
+                            <div className="flex flex-col space-y-1">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm font-medium">
+                                  {config.userFriendlyName}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  ({config.technicalName})
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span
+                                  className="text-xs px-1.5 py-0.5 bg-white/60 rounded-full"
+                                  aria-label={`Category: ${config.category}`}
+                                >
+                                  {config.category}
+                                </span>
+                              </div>
                             </div>
                             <p
                               id={`node-${nodeType}-description`}
-                              className="text-xs text-gray-500 truncate"
+                              className="text-xs text-gray-500 mt-1 line-clamp-2"
                             >
                               {config.description}
                             </p>
