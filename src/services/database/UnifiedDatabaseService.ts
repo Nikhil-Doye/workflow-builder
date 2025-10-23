@@ -141,7 +141,7 @@ export class UnifiedDatabaseService {
           whereClause: config.whereClause,
           whereCondition: config.whereCondition,
           whereParameters: config.whereParameters,
-          limit: config.limit,
+          limit: config.updateLimit,
         };
 
       case "delete":

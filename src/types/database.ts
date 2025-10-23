@@ -30,7 +30,7 @@ export interface DatabaseConfig {
   whereClause?: Record<string, any>;
   whereCondition?: string;
   whereParameters?: Record<string, any>;
-  limit?: number;
+  updateLimit?: number;
 
   // Delete operation
   deleteTable?: string;
