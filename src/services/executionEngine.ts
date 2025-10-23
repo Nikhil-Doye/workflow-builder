@@ -832,6 +832,8 @@ export class ExecutionEngine {
         return (await import("./processors/llmProcessor")).default;
       case "database":
         return (await import("./processors/unifiedDatabaseProcessor")).default;
+      case "slack":
+        return (await import("./processors/slackProcessor")).default;
       case "structuredOutput":
         return (await import("./processors/structuredOutputProcessor")).default;
       case "embeddingGenerator":

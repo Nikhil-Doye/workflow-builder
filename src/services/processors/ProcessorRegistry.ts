@@ -8,6 +8,7 @@ export class ProcessorRegistry {
     "webScraping",
     "llmTask",
     "database",
+    "slack",
     "structuredOutput",
     "embeddingGenerator",
     "similaritySearch",
@@ -145,6 +146,10 @@ export class ProcessorRegistry {
       {
         pattern: /db|database|sql/i,
         types: ["database"],
+      },
+      {
+        pattern: /slack|message|notification|chat/i,
+        types: ["slack"],
       },
       {
         pattern: /embed|vector/i,

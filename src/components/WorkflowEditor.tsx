@@ -32,6 +32,8 @@ import {
   DataOutputNode,
   // Unified database node
   UnifiedDatabaseNode,
+  // Slack node
+  SlackNode,
 } from "./nodes";
 import { NodeData } from "../types";
 import { Grid, Trash2, Sparkles, X, Lightbulb, Play } from "lucide-react";
@@ -46,6 +48,8 @@ const nodeTypes: NodeTypes = {
   dataOutput: DataOutputNode,
   // Unified database node
   database: UnifiedDatabaseNode,
+  // Slack node
+  slack: SlackNode,
 };
 
 interface WorkflowEditorProps {
