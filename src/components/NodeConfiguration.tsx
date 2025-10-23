@@ -19,7 +19,19 @@ interface NodeConfigurationProps {
   onClose: () => void;
 }
 
-const nodeTypeConfigs = {
+interface FieldConfig {
+  key: string;
+  label: string;
+  type: string;
+  placeholder?: string;
+  options?: string[];
+  multiple?: boolean;
+  defaultValue?: any;
+  min?: number;
+  max?: number;
+}
+
+const nodeTypeConfigs: Record<string, { title: string; fields: FieldConfig[] }> = {
   webScraping: {
     title: "Web Scraping Configuration (Firecrawl AI)",
     fields: [
@@ -199,102 +211,38 @@ const nodeTypeConfigs = {
       },
     ],
   },
-  databaseQuery: {
-    title: "Database Query Configuration",
+  database: {
+    title: "Database Operations Configuration",
     fields: [
       {
-        key: "connector",
-        label: "Database Connector",
+        key: "operation",
+        label: "Operation Type",
         type: "select",
-        options: ["postgres", "mysql", "mongodb"],
+        options: ["query", "insert", "update", "delete", "aggregate", "transaction"],
+      },
+      {
+        key: "connectionId",
+        label: "Database Connection",
+        type: "text",
+        placeholder: "connection-id",
       },
       {
         key: "query",
-        label: "SQL Query",
+        label: "SQL Query (for query operation)",
         type: "textarea",
         placeholder: "SELECT * FROM users WHERE id = ?",
       },
       {
-        key: "parameters",
-        label: "Query Parameters (JSON)",
-        type: "textarea",
-        placeholder: '["param1", "param2"]',
-      },
-    ],
-  },
-  databaseInsert: {
-    title: "Database Insert Configuration",
-    fields: [
-      {
-        key: "connector",
-        label: "Database Connector",
-        type: "select",
-        options: ["postgres", "mysql", "mongodb"],
-      },
-      {
         key: "table",
-        label: "Table/Collection Name",
+        label: "Table Name (for insert/update/delete)",
         type: "text",
         placeholder: "users",
       },
       {
         key: "data",
-        label: "Data to Insert (JSON)",
+        label: "Data (JSON)",
         type: "textarea",
         placeholder: '{"name": "John", "email": "john@example.com"}',
-      },
-    ],
-  },
-  databaseUpdate: {
-    title: "Database Update Configuration",
-    fields: [
-      {
-        key: "connector",
-        label: "Database Connector",
-        type: "select",
-        options: ["postgres", "mysql", "mongodb"],
-      },
-      {
-        key: "table",
-        label: "Table/Collection Name",
-        type: "text",
-        placeholder: "users",
-      },
-      {
-        key: "where",
-        label: "WHERE Condition",
-        type: "text",
-        placeholder: "id = ?",
-      },
-      {
-        key: "data",
-        label: "Data to Update (JSON)",
-        type: "textarea",
-        placeholder:
-          '{"name": "John Updated", "email": "john.updated@example.com"}',
-      },
-    ],
-  },
-  databaseDelete: {
-    title: "Database Delete Configuration",
-    fields: [
-      {
-        key: "connector",
-        label: "Database Connector",
-        type: "select",
-        options: ["postgres", "mysql", "mongodb"],
-      },
-      {
-        key: "table",
-        label: "Table/Collection Name",
-        type: "text",
-        placeholder: "users",
-      },
-      {
-        key: "where",
-        label: "WHERE Condition",
-        type: "text",
-        placeholder: "id = ?",
       },
     ],
   },
@@ -329,12 +277,7 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
   };
 
   // Check if this is a database node and use the enhanced configuration
-  const isDatabaseNode = [
-    "databaseQuery",
-    "databaseInsert",
-    "databaseUpdate",
-    "databaseDelete",
-  ].includes(data.type);
+  const isDatabaseNode = data.type === "database";
 
   if (isDatabaseNode) {
     return (
@@ -521,7 +464,7 @@ Return only the optimized prompt:`,
     }
   };
 
-  const renderField = (field: any) => {
+  const renderField = (field: FieldConfig) => {
     const value = currentData.config[field.key] || field.defaultValue || "";
 
     return (
