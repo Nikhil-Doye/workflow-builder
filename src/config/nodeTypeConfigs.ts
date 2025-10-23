@@ -114,64 +114,22 @@ export const nodeTypeConfigs: Record<NodeType, NodeTypeConfig> = {
       "Display results on a dashboard",
     ],
   },
-  databaseQuery: {
-    technicalName: "databaseQuery",
-    userFriendlyName: "Get Database Info",
-    description: "Retrieve specific information from your database",
+  database: {
+    technicalName: "database",
+    userFriendlyName: "Database Operations",
+    description: "Query, insert, update, delete, and manage database records",
     category: "Data Sources",
     icon: "🗄️",
     helpText:
-      "Searches your database to find specific records or information. You can ask for customers, products, orders, or any data stored in your database.",
+      "Connect and interact with your database in multiple ways. Query data, insert new records, update existing ones, delete records, run aggregations, or execute transactions. Choose your operation type and configure accordingly.",
     commonUseCases: [
-      "Find all customers from last month",
-      "Get product inventory levels",
-      "Retrieve order details",
-      "Search for specific records",
-    ],
-  },
-  databaseInsert: {
-    technicalName: "databaseInsert",
-    userFriendlyName: "Add to Database",
-    description: "Add new records to your database",
-    category: "Output",
-    icon: "➕",
-    helpText:
-      "Adds new information to your database. Perfect for saving new customers, products, or any new data you've collected.",
-    commonUseCases: [
-      "Add new customer records",
-      "Save form submissions",
-      "Store new product information",
-      "Record new transactions",
-    ],
-  },
-  databaseUpdate: {
-    technicalName: "databaseUpdate",
-    userFriendlyName: "Update Database",
-    description: "Modify existing records in your database",
-    category: "Output",
-    icon: "✏️",
-    helpText:
-      "Changes information that's already in your database. Use this to update customer details, product prices, or any existing records.",
-    commonUseCases: [
-      "Update customer contact information",
-      "Change product prices",
-      "Mark orders as completed",
-      "Update employee records",
-    ],
-  },
-  databaseDelete: {
-    technicalName: "databaseDelete",
-    userFriendlyName: "Remove from Database",
-    description: "Delete records from your database",
-    category: "Output",
-    icon: "🗑️",
-    helpText:
-      "Removes records from your database. Use carefully - this action cannot be undone. Good for cleaning up old data or removing duplicates.",
-    commonUseCases: [
-      "Remove duplicate records",
-      "Delete old test data",
-      "Clean up expired records",
-      "Remove cancelled orders",
+      "Query customer data from your database",
+      "Insert new leads from form submissions",
+      "Update customer information and status",
+      "Delete old or duplicate records",
+      "Run reports with aggregate functions",
+      "Execute complex multi-step transactions",
+      "Sync data between different systems",
     ],
   },
 };

@@ -27,10 +27,7 @@ const nodeIcons: Record<NodeType, React.ComponentType<any>> = {
   llmTask: Brain,
   dataInput: ArrowUpFromLine,
   dataOutput: ArrowDownToLine,
-  databaseQuery: Database,
-  databaseInsert: Plus,
-  databaseUpdate: Edit,
-  databaseDelete: Trash2,
+  database: Database,
 };
 
 const nodeColors: Record<
@@ -79,29 +76,11 @@ const nodeColors: Record<
     icon: "text-blue-600",
     accent: "bg-blue-500",
   },
-  databaseQuery: {
+  database: {
     bg: "bg-cyan-50",
     border: "border-cyan-200",
     icon: "text-cyan-600",
     accent: "bg-cyan-500",
-  },
-  databaseInsert: {
-    bg: "bg-emerald-50",
-    border: "border-emerald-200",
-    icon: "text-emerald-600",
-    accent: "bg-emerald-500",
-  },
-  databaseUpdate: {
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    icon: "text-amber-600",
-    accent: "bg-amber-500",
-  },
-  databaseDelete: {
-    bg: "bg-red-50",
-    border: "border-red-200",
-    icon: "text-red-600",
-    accent: "bg-red-500",
   },
 };
 

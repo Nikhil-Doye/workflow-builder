@@ -30,11 +30,8 @@ import {
   StructuredOutputNode,
   DataInputNode,
   DataOutputNode,
-  // Database nodes
-  DatabaseQueryNode,
-  DatabaseInsertNode,
-  DatabaseUpdateNode,
-  DatabaseDeleteNode,
+  // Unified database node
+  UnifiedDatabaseNode,
 } from "./nodes";
 import { NodeData } from "../types";
 import { Grid, Trash2, Sparkles, X, Lightbulb, Play } from "lucide-react";
@@ -47,11 +44,8 @@ const nodeTypes: NodeTypes = {
   structuredOutput: StructuredOutputNode,
   dataInput: DataInputNode,
   dataOutput: DataOutputNode,
-  // Database nodes
-  databaseQuery: DatabaseQueryNode,
-  databaseInsert: DatabaseInsertNode,
-  databaseUpdate: DatabaseUpdateNode,
-  databaseDelete: DatabaseDeleteNode,
+  // Unified database node
+  database: UnifiedDatabaseNode,
 };
 
 interface WorkflowEditorProps {

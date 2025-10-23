@@ -17,11 +17,8 @@ export type NodeType =
   | "llmTask"
   | "dataInput"
   | "dataOutput"
-  // Database connectors
-  | "databaseQuery"
-  | "databaseInsert"
-  | "databaseUpdate"
-  | "databaseDelete";
+  // Unified database connector
+  | "database";
 
 export type NodeStatus =
   | "idle"

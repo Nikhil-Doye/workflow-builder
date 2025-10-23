@@ -830,13 +830,8 @@ export class ExecutionEngine {
         return (await import("./processors/webScrapingProcessor")).default;
       case "llmTask":
         return (await import("./processors/llmProcessor")).default;
-      case "databaseQuery":
-      case "databaseInsert":
-      case "databaseUpdate":
-      case "databaseDelete":
-      case "databaseAggregate":
-      case "databaseTransaction":
-        return (await import("./processors/databaseProcessor")).default;
+      case "database":
+        return (await import("./processors/unifiedDatabaseProcessor")).default;
       case "structuredOutput":
         return (await import("./processors/structuredOutputProcessor")).default;
       case "embeddingGenerator":
