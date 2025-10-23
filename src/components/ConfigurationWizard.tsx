@@ -195,10 +195,7 @@ export const ConfigurationWizard: React.FC<ConfigurationWizardProps> = ({
       embeddingGenerator: "Embedding Generator",
       similaritySearch: "Similarity Search",
       structuredOutput: "Structured Output",
-      databaseQuery: "Database Query",
-      databaseInsert: "Database Insert",
-      databaseUpdate: "Database Update",
-      databaseDelete: "Database Delete",
+      database: "Database Operations",
     };
     return labels[type] || "New Node";
   };
