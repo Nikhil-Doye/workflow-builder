@@ -18,7 +18,9 @@ export type NodeType =
   | "dataInput"
   | "dataOutput"
   // Unified database connector
-  | "database";
+  | "database"
+  // Slack integration
+  | "slack";
 
 export type NodeStatus =
   | "idle"
