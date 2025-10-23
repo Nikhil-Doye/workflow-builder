@@ -40,10 +40,7 @@ export const NodeLibrary: React.FC = () => {
     "similaritySearch",
     "structuredOutput",
     "dataOutput",
-    "databaseQuery",
-    "databaseInsert",
-    "databaseUpdate",
-    "databaseDelete",
+    "database",
   ];
 
   const nodeTypeColors: Record<NodeType, string> = {
@@ -54,10 +51,7 @@ export const NodeLibrary: React.FC = () => {
     similaritySearch: "orange",
     structuredOutput: "indigo",
     dataOutput: "gray",
-    databaseQuery: "cyan",
-    databaseInsert: "cyan",
-    databaseUpdate: "cyan",
-    databaseDelete: "cyan",
+    database: "cyan",
   };
 
   const nodeTypesByCategory = getNodeTypesByCategory();
