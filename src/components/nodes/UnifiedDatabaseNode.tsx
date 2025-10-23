@@ -1,5 +1,4 @@
 import React from "react";
-import { BaseNode } from "./BaseNode";
 import { NodeData } from "../../types";
 import { DatabaseOperation } from "../../types/database";
 import {
@@ -10,7 +9,6 @@ import {
   Search,
   Plus,
   Edit,
-  Trash2,
   BarChart3,
   GitBranch,
 } from "lucide-react";
