@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Database,
   MessageSquare,
+  Bot,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -27,6 +28,7 @@ const nodeIcons: Record<NodeType, React.ComponentType<any>> = {
   dataOutput: ArrowDownToLine,
   database: Database,
   slack: MessageSquare,
+  discord: Bot,
 };
 
 const nodeColors: Record<
@@ -86,6 +88,12 @@ const nodeColors: Record<
     border: "border-purple-200",
     icon: "text-purple-600",
     accent: "bg-purple-500",
+  },
+  discord: {
+    bg: "bg-indigo-50",
+    border: "border-indigo-200",
+    icon: "text-indigo-600",
+    accent: "bg-indigo-500",
   },
 };
 

@@ -258,6 +258,26 @@ export const fieldConfigs: Record<string, FieldConfig> = {
       required: true,
     },
   },
+  // Discord operation field
+  "discord.operation": {
+    technicalName: "operation",
+    userFriendlyName: "Discord operation",
+    description: "Choose what type of Discord operation to perform",
+    helpText:
+      "Select the type of Discord operation you want to perform. Each operation has different configuration options.",
+    examples: [
+      "Message - Send messages to channels or users",
+      "Channel - Create, modify, or manage channels",
+      "User - Manage users and their properties",
+      "Role - Create and manage roles",
+      "Reaction - Add/remove reactions to messages",
+      "Voice - Manage voice channels and connections",
+      "Webhook - Send messages via webhooks",
+    ],
+    validation: {
+      required: true,
+    },
+  },
 
   // Output Fields
   format: {
@@ -404,6 +424,8 @@ export const getFieldsForNodeType = (nodeType: string): string[] => {
     structuredOutput: ["schema", "model", "label"],
     dataOutput: ["format", "filename", "label"],
     database: ["connectionId", "operation", "label"],
+    slack: ["botToken", "operation", "label"],
+    discord: ["botToken", "operation", "label"],
   };
 
   return fieldMappings[nodeType] || [];

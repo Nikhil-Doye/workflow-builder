@@ -292,6 +292,49 @@ const nodeTypeConfigs: Record<
       },
     ],
   },
+  discord: {
+    title: "Discord Integration Configuration",
+    fields: [
+      {
+        key: "botToken",
+        label: "Bot Token",
+        type: "text",
+        placeholder: "your-bot-token",
+      },
+      {
+        key: "operation",
+        label: "Operation Type",
+        type: "select",
+        options: [
+          "message",
+          "channel",
+          "user",
+          "role",
+          "reaction",
+          "voice",
+          "webhook",
+        ],
+      },
+      {
+        key: "channelId",
+        label: "Channel ID (for message/channel operations)",
+        type: "text",
+        placeholder: "123456789012345678",
+      },
+      {
+        key: "message",
+        label: "Message Text",
+        type: "textarea",
+        placeholder: "Hello from the workflow!",
+      },
+      {
+        key: "userId",
+        label: "User ID (for user operations)",
+        type: "text",
+        placeholder: "123456789012345678",
+      },
+    ],
+  },
 };
 
 export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({

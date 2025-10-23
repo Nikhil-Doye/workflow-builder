@@ -20,7 +20,8 @@ export type NodeType =
   // Unified database connector
   | "database"
   // Slack integration
-  | "slack";
+  | "slack"
+  | "discord";
 
 export type NodeStatus =
   | "idle"

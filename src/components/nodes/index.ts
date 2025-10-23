@@ -10,3 +10,5 @@ export { DataOutputNode } from "./DataOutputNode";
 export { UnifiedDatabaseNode } from "./UnifiedDatabaseNode";
 // Slack node
 export { SlackNode } from "./SlackNode";
+// Discord node
+export { DiscordNode } from "./DiscordNode";

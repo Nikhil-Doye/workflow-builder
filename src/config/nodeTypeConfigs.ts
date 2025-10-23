@@ -151,6 +151,26 @@ export const nodeTypeConfigs: Record<NodeType, NodeTypeConfig> = {
       "React to messages with emojis",
     ],
   },
+  discord: {
+    technicalName: "discord",
+    userFriendlyName: "Discord Integration",
+    description:
+      "Send messages, manage channels, roles, and interact with Discord servers",
+    category: "Communication",
+    icon: "🎮",
+    helpText:
+      "Integrate with Discord to send messages, create channels, manage roles, add reactions, and interact with your community. Perfect for gaming communities and developer teams.",
+    commonUseCases: [
+      "Send automated messages to channels",
+      "Create and manage server channels",
+      "Assign roles to users automatically",
+      "Add reactions to messages",
+      "Manage voice channels",
+      "Send webhook notifications",
+      "Moderate server content",
+      "Welcome new members",
+    ],
+  },
 };
 
 export const getNodeTypeConfig = (nodeType: NodeType): NodeTypeConfig => {

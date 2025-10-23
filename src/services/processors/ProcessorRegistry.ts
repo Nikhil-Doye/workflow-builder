@@ -9,6 +9,7 @@ export class ProcessorRegistry {
     "llmTask",
     "database",
     "slack",
+    "discord",
     "structuredOutput",
     "embeddingGenerator",
     "similaritySearch",
@@ -149,6 +150,10 @@ export class ProcessorRegistry {
       {
         pattern: /slack|message|notification|chat/i,
         types: ["slack"],
+      },
+      {
+        pattern: /discord|gaming|community|server/i,
+        types: ["discord"],
       },
       {
         pattern: /embed|vector/i,

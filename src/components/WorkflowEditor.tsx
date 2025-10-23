@@ -34,6 +34,8 @@ import {
   UnifiedDatabaseNode,
   // Slack node
   SlackNode,
+  // Discord node
+  DiscordNode,
 } from "./nodes";
 import { NodeData } from "../types";
 import { Grid, Trash2, Sparkles, X, Lightbulb, Play } from "lucide-react";
@@ -50,6 +52,8 @@ const nodeTypes: NodeTypes = {
   database: UnifiedDatabaseNode,
   // Slack node
   slack: SlackNode,
+  // Discord node
+  discord: DiscordNode,
 };
 
 interface WorkflowEditorProps {
@@ -69,7 +73,10 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     togglePanel,
     updateNodePosition,
   } = useWorkflowStore();
-  const nodes = useMemo(() => currentWorkflow?.nodes || [], [currentWorkflow?.nodes]);
+  const nodes = useMemo(
+    () => currentWorkflow?.nodes || [],
+    [currentWorkflow?.nodes]
+  );
   const edges = currentWorkflow?.edges || [];
   const [showConfig, setShowConfig] = useState(false);
   const [showCopilot, setShowCopilot] = useState(false);

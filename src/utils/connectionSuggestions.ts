@@ -128,6 +128,18 @@ const NODE_COMPATIBILITY: Record<
     description:
       "Slack nodes typically send notifications and updates to team channels",
   },
+  discord: {
+    canConnectTo: ["dataOutput"],
+    shouldConnectTo: ["dataOutput"],
+    commonPatterns: [
+      "Process → Send message",
+      "Generate report → Post to channel",
+      "Data analysis → Share results",
+      "Game events → Notify community",
+    ],
+    description:
+      "Discord nodes typically send messages and updates to community channels",
+  },
 };
 
 /**

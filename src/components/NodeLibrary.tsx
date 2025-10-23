@@ -54,6 +54,7 @@ export const NodeLibrary: React.FC = () => {
     dataOutput: "gray",
     database: "cyan",
     slack: "purple",
+    discord: "indigo",
   };
 
   const nodeTypesByCategory = getNodeTypesByCategory();

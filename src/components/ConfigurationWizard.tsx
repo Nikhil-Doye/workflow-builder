@@ -49,6 +49,7 @@ import { DataOutputWizard } from "./wizards/DataOutputWizard";
 import { EmbeddingWizard } from "./wizards/EmbeddingWizard";
 import { SimilaritySearchWizard } from "./wizards/SimilaritySearchWizard";
 import { StructuredOutputWizard } from "./wizards/StructuredOutputWizard";
+import { DiscordWizard } from "./wizards/DiscordWizard";
 
 const WIZARD_STEPS: Record<NodeType, WizardStep[]> = {
   dataInput: [
@@ -146,6 +147,17 @@ const WIZARD_STEPS: Record<NodeType, WizardStep[]> = {
       helpText: "Set up your Slack operation parameters",
     },
   ],
+  // Discord integration
+  discord: [
+    {
+      id: "discord-config",
+      title: "Discord Integration",
+      description: "Configure your Discord integration",
+      component: DiscordWizard,
+      validation: (data: any) => !!data.operation && !!data.botToken,
+      helpText: "Set up your Discord operation parameters",
+    },
+  ],
 };
 
 export const ConfigurationWizard: React.FC<ConfigurationWizardProps> = ({
@@ -208,6 +220,7 @@ export const ConfigurationWizard: React.FC<ConfigurationWizardProps> = ({
       structuredOutput: "Structured Output",
       database: "Database Operations",
       slack: "Slack Integration",
+      discord: "Discord Integration",
     };
     return labels[type] || "New Node";
   };
