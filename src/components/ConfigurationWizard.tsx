@@ -135,6 +135,17 @@ const WIZARD_STEPS: Record<NodeType, WizardStep[]> = {
       helpText: "Set up your database operation parameters",
     },
   ],
+  // Slack integration
+  slack: [
+    {
+      id: "slack-config",
+      title: "Slack Integration",
+      description: "Configure your Slack integration",
+      component: DataInputWizard, // Placeholder - will be replaced with SlackWizard
+      validation: (data: any) => !!data.operation && !!data.botToken,
+      helpText: "Set up your Slack operation parameters",
+    },
+  ],
 };
 
 export const ConfigurationWizard: React.FC<ConfigurationWizardProps> = ({
@@ -196,6 +207,7 @@ export const ConfigurationWizard: React.FC<ConfigurationWizardProps> = ({
       similaritySearch: "Similarity Search",
       structuredOutput: "Structured Output",
       database: "Database Operations",
+      slack: "Slack Integration",
     };
     return labels[type] || "New Node";
   };

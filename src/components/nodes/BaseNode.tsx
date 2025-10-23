@@ -13,6 +13,7 @@ import {
   XCircle,
   AlertCircle,
   Database,
+  MessageSquare,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -25,6 +26,7 @@ const nodeIcons: Record<NodeType, React.ComponentType<any>> = {
   dataInput: ArrowUpFromLine,
   dataOutput: ArrowDownToLine,
   database: Database,
+  slack: MessageSquare,
 };
 
 const nodeColors: Record<
@@ -78,6 +80,12 @@ const nodeColors: Record<
     border: "border-cyan-200",
     icon: "text-cyan-600",
     accent: "bg-cyan-500",
+  },
+  slack: {
+    bg: "bg-purple-50",
+    border: "border-purple-200",
+    icon: "text-purple-600",
+    accent: "bg-purple-500",
   },
 };
 

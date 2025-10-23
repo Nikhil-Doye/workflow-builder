@@ -132,6 +132,25 @@ export const nodeTypeConfigs: Record<NodeType, NodeTypeConfig> = {
       "Sync data between different systems",
     ],
   },
+  slack: {
+    technicalName: "slack",
+    userFriendlyName: "Slack Integration",
+    description:
+      "Send messages, manage channels, interact with users, and more on Slack",
+    category: "Communication",
+    icon: "💬",
+    helpText:
+      "Integrate with Slack to send messages, create channels, manage users, share files, add reactions, and set reminders. Perfect for notifications and team communication.",
+    commonUseCases: [
+      "Send automated notifications to channels",
+      "Post daily reports and updates",
+      "Create project-specific channels",
+      "Send direct messages to team members",
+      "Share files and documents",
+      "Set reminders for important tasks",
+      "React to messages with emojis",
+    ],
+  },
 };
 
 export const getNodeTypeConfig = (nodeType: NodeType): NodeTypeConfig => {

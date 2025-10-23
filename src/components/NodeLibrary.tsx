@@ -41,6 +41,7 @@ export const NodeLibrary: React.FC = () => {
     "structuredOutput",
     "dataOutput",
     "database",
+    "slack",
   ];
 
   const nodeTypeColors: Record<NodeType, string> = {
@@ -52,6 +53,7 @@ export const NodeLibrary: React.FC = () => {
     structuredOutput: "indigo",
     dataOutput: "gray",
     database: "cyan",
+    slack: "purple",
   };
 
   const nodeTypesByCategory = getNodeTypesByCategory();

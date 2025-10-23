@@ -113,7 +113,20 @@ const NODE_COMPATIBILITY: Record<
       "Query → Generate embeddings",
       "Insert/Update/Delete → Confirm output",
     ],
-    description: "Database operations can feed into processing nodes or output confirmation",
+    description:
+      "Database operations can feed into processing nodes or output confirmation",
+  },
+  // Slack node
+  slack: {
+    canConnectTo: ["dataOutput"],
+    shouldConnectTo: ["dataOutput"],
+    commonPatterns: [
+      "Process → Send notification",
+      "Generate report → Post to channel",
+      "Data analysis → Share results",
+    ],
+    description:
+      "Slack nodes typically send notifications and updates to team channels",
   },
 };
 
