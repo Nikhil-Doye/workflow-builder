@@ -13,9 +13,6 @@ import {
   XCircle,
   AlertCircle,
   Database,
-  Plus,
-  Edit,
-  Trash2,
 } from "lucide-react";
 import { clsx } from "clsx";
 
