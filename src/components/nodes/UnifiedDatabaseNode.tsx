@@ -25,7 +25,10 @@ export const UnifiedDatabaseNode: React.FC<UnifiedDatabaseNodeProps> = ({
   // Get operation display info
   const getOperationInfo = () => {
     const operation = data.config?.operation as DatabaseOperation;
-    const operationIcons: Record<DatabaseOperation, React.ComponentType<any>> = {
+    const operationIcons: Record<
+      DatabaseOperation,
+      React.ComponentType<any>
+    > = {
       query: Search,
       insert: Plus,
       update: Edit,

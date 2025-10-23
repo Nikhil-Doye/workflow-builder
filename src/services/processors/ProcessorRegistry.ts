@@ -144,12 +144,7 @@ export class ProcessorRegistry {
       { pattern: /llm|ai|gpt|openai/i, types: ["llmTask"] },
       {
         pattern: /db|database|sql/i,
-        types: [
-          "databaseQuery",
-          "databaseInsert",
-          "databaseUpdate",
-          "databaseDelete",
-        ],
+        types: ["database"],
       },
       {
         pattern: /embed|vector/i,
