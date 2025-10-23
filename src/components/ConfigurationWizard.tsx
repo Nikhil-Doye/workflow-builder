@@ -124,45 +124,15 @@ const WIZARD_STEPS: Record<NodeType, WizardStep[]> = {
       helpText: "Define how your data should be structured and formatted",
     },
   ],
-  // Database nodes - using simple wizards for now
-  databaseQuery: [
+  // Unified database node
+  database: [
     {
-      id: "query-config",
-      title: "Database Query",
-      description: "Configure your database query",
-      component: DataInputWizard, // Placeholder
-      validation: (data) => !!data.query,
-      helpText: "Set up your database query parameters",
-    },
-  ],
-  databaseInsert: [
-    {
-      id: "insert-config",
-      title: "Database Insert",
-      description: "Configure data insertion",
-      component: DataInputWizard, // Placeholder
-      validation: (data) => !!data.table,
-      helpText: "Configure how data will be inserted into the database",
-    },
-  ],
-  databaseUpdate: [
-    {
-      id: "update-config",
-      title: "Database Update",
-      description: "Configure data updates",
-      component: DataInputWizard, // Placeholder
-      validation: (data) => !!data.table,
-      helpText: "Configure how data will be updated in the database",
-    },
-  ],
-  databaseDelete: [
-    {
-      id: "delete-config",
-      title: "Database Delete",
-      description: "Configure data deletion",
-      component: DataInputWizard, // Placeholder
-      validation: (data) => !!data.table,
-      helpText: "Configure how data will be deleted from the database",
+      id: "database-config",
+      title: "Database Operation",
+      description: "Configure your database operation",
+      component: DataInputWizard, // Placeholder - will be replaced with DatabaseWizard
+      validation: (data: any) => !!data.operation && !!data.connectionId,
+      helpText: "Set up your database operation parameters",
     },
   ],
 };
