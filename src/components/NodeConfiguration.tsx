@@ -29,9 +29,13 @@ interface FieldConfig {
   defaultValue?: any;
   min?: number;
   max?: number;
+  step?: number;
 }
 
-const nodeTypeConfigs: Record<string, { title: string; fields: FieldConfig[] }> = {
+const nodeTypeConfigs: Record<
+  string,
+  { title: string; fields: FieldConfig[] }
+> = {
   webScraping: {
     title: "Web Scraping Configuration (Firecrawl AI)",
     fields: [
@@ -218,7 +222,14 @@ const nodeTypeConfigs: Record<string, { title: string; fields: FieldConfig[] }> 
         key: "operation",
         label: "Operation Type",
         type: "select",
-        options: ["query", "insert", "update", "delete", "aggregate", "transaction"],
+        options: [
+          "query",
+          "insert",
+          "update",
+          "delete",
+          "aggregate",
+          "transaction",
+        ],
       },
       {
         key: "connectionId",
