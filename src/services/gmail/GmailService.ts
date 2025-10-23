@@ -138,7 +138,7 @@ export class GmailService {
     }
 
     // Create new label
-    const labelData = {
+    const labelData: any = {
       name: config.labelName,
       labelListVisibility: "labelShow",
       messageListVisibility: "show",
