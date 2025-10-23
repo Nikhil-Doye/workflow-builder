@@ -9,6 +9,7 @@ import {
   Search,
   Plus,
   Edit,
+  Trash2,
   BarChart3,
   GitBranch,
 } from "lucide-react";
