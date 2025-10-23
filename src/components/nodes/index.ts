@@ -8,3 +8,5 @@ export { DataInputNode } from "./DataInputNode";
 export { DataOutputNode } from "./DataOutputNode";
 // Unified database node
 export { UnifiedDatabaseNode } from "./UnifiedDatabaseNode";
+// Slack node
+export { SlackNode } from "./SlackNode";

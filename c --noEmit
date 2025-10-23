@@ -1,0 +1,5 @@
+[33m5ca121b[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Add SlackWizard component for configuring Slack operations
+[33m4136930[m Add SlackNode component for enhanced Slack operation visualization
+[33m578456b[m Add slackProcessor function for handling Slack operations
+[33me518a70[m Add SlackService class to handle various Slack operations
+[33m315e01c[m Add Slack integration support across components

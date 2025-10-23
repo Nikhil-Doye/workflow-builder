@@ -143,28 +143,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     [selectNode]
   );
 
-  const handleConnectionStart = useCallback(
-    (event: React.MouseEvent | React.TouchEvent, params: any) => {
-      const node = nodes.find((n) => n.id === params.nodeId);
-      if (node) {
-        setConnectionSource(node as Node<NodeData>);
-      }
-    },
-    [nodes]
-  );
-
-  const handleConnectionEnd = useCallback(
-    (event: React.MouseEvent | React.TouchEvent, params: any) => {
-      if (connectionSource && params.nodeId) {
-        const node = nodes.find((n) => n.id === params.nodeId);
-        if (node) {
-          setConnectionTarget(node as Node<NodeData>);
-        }
-      }
-    },
-    [connectionSource, nodes]
-  );
-
   const handleSuggestionClick = useCallback(
     (suggestion: any) => {
       const sourceNode = nodes.find((n) => n.id === suggestion.sourceId);

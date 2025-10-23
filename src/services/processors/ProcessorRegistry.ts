@@ -135,7 +135,6 @@ export class ProcessorRegistry {
    * Get suggestions for similar node types
    */
   static getSimilarTypes(nodeType: string): string[] {
-    const supportedTypes = this.getSupportedTypes();
     const similarTypes: string[] = [];
 
     // Simple similarity matching based on common patterns

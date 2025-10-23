@@ -148,9 +148,6 @@ export function generateConnectionSuggestions(
 
   // Find unconnected nodes and suggest connections
   const unconnectedNodes = nodes.filter((node) => !connectedNodes.has(node.id));
-  const connectedNodesList = nodes.filter((node) =>
-    connectedNodes.has(node.id)
-  );
 
   // Suggest connections for unconnected nodes
   unconnectedNodes.forEach((node) => {
@@ -339,8 +336,34 @@ function wouldCreateCircularDependency(
     { source: sourceId, target: targetId } as Edge,
   ];
 
-  // Check for cycles starting from the target
-  return hasCycle(targetId);
+  // Check for cycles starting from the target using tempEdges
+  return hasCycleWithEdges(targetId, tempEdges);
+}
+
+/**
+ * Check for cycles using specific edges
+ */
+function hasCycleWithEdges(nodeId: string, edges: Edge[]): boolean {
+  const visited = new Set<string>();
+  const recStack = new Set<string>();
+
+  function hasCycle(nodeId: string): boolean {
+    if (recStack.has(nodeId)) return true;
+    if (visited.has(nodeId)) return false;
+
+    visited.add(nodeId);
+    recStack.add(nodeId);
+
+    const outgoingEdges = edges.filter((edge) => edge.source === nodeId);
+    for (const edge of outgoingEdges) {
+      if (hasCycle(edge.target)) return true;
+    }
+
+    recStack.delete(nodeId);
+    return false;
+  }
+
+  return hasCycle(nodeId);
 }
 
 /**
