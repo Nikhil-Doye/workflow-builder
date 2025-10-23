@@ -1,6 +1,7 @@
 import React from "react";
 import { BaseNode } from "./BaseNode";
 import { NodeData } from "../../types";
+import { DatabaseOperation } from "../../types/database";
 import {
   Database,
   CheckCircle,
@@ -25,8 +26,8 @@ export const UnifiedDatabaseNode: React.FC<UnifiedDatabaseNodeProps> = ({
 }) => {
   // Get operation display info
   const getOperationInfo = () => {
-    const operation = data.config?.operation;
-    const operationIcons = {
+    const operation = data.config?.operation as DatabaseOperation;
+    const operationIcons: Record<DatabaseOperation, React.ComponentType<any>> = {
       query: Search,
       insert: Plus,
       update: Edit,
@@ -35,7 +36,7 @@ export const UnifiedDatabaseNode: React.FC<UnifiedDatabaseNodeProps> = ({
       transaction: GitBranch,
     };
 
-    const operationLabels = {
+    const operationLabels: Record<DatabaseOperation, string> = {
       query: "Query",
       insert: "Insert",
       update: "Update",
