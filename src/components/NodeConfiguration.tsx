@@ -335,6 +335,62 @@ const nodeTypeConfigs: Record<
       },
     ],
   },
+  gmail: {
+    title: "Gmail Integration Configuration",
+    fields: [
+      {
+        key: "accessToken",
+        label: "Access Token",
+        type: "text",
+        placeholder: "your-gmail-access-token",
+      },
+      {
+        key: "operation",
+        label: "Operation Type",
+        type: "select",
+        options: [
+          "send",
+          "read",
+          "reply",
+          "forward",
+          "draft",
+          "label",
+          "search",
+          "attachment",
+        ],
+      },
+      {
+        key: "to",
+        label: "To (for send/forward operations)",
+        type: "text",
+        placeholder: "recipient@example.com",
+      },
+      {
+        key: "subject",
+        label: "Subject",
+        type: "text",
+        placeholder: "Email subject",
+      },
+      {
+        key: "body",
+        label: "Message Body",
+        type: "textarea",
+        placeholder: "Email content",
+      },
+      {
+        key: "messageId",
+        label: "Message ID (for read/reply/forward operations)",
+        type: "text",
+        placeholder: "Message ID",
+      },
+      {
+        key: "query",
+        label: "Search Query (for read/search operations)",
+        type: "text",
+        placeholder: "Search query",
+      },
+    ],
+  },
 };
 
 export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
