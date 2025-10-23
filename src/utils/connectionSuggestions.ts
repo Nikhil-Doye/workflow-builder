@@ -34,7 +34,7 @@ const NODE_COMPATIBILITY: Record<
       "llmTask",
       "embeddingGenerator",
       "structuredOutput",
-      "databaseQuery",
+      "database",
     ],
     shouldConnectTo: ["webScraping", "llmTask", "embeddingGenerator"],
     commonPatterns: ["Start workflows", "Provide data to processing nodes"],
@@ -98,39 +98,22 @@ const NODE_COMPATIBILITY: Record<
     commonPatterns: ["End of workflow"],
     description: "Data output nodes are typically the end of workflows",
   },
-  // Database nodes
-  databaseQuery: {
+  // Database node
+  database: {
     canConnectTo: [
       "llmTask",
       "structuredOutput",
       "dataOutput",
       "embeddingGenerator",
     ],
-    shouldConnectTo: ["llmTask", "structuredOutput"],
+    shouldConnectTo: ["llmTask", "structuredOutput", "dataOutput"],
     commonPatterns: [
       "Query → Process",
       "Query → Structure",
       "Query → Generate embeddings",
+      "Insert/Update/Delete → Confirm output",
     ],
-    description: "Database queries typically feed into processing nodes",
-  },
-  databaseInsert: {
-    canConnectTo: ["dataOutput"],
-    shouldConnectTo: ["dataOutput"],
-    commonPatterns: ["Insert → Confirm output"],
-    description: "Database inserts typically end with confirmation output",
-  },
-  databaseUpdate: {
-    canConnectTo: ["dataOutput"],
-    shouldConnectTo: ["dataOutput"],
-    commonPatterns: ["Update → Confirm output"],
-    description: "Database updates typically end with confirmation output",
-  },
-  databaseDelete: {
-    canConnectTo: ["dataOutput"],
-    shouldConnectTo: ["dataOutput"],
-    commonPatterns: ["Delete → Confirm output"],
-    description: "Database deletes typically end with confirmation output",
+    description: "Database operations can feed into processing nodes or output confirmation",
   },
 };
 
