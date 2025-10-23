@@ -10,6 +10,7 @@ export class ProcessorRegistry {
     "database",
     "slack",
     "discord",
+    "gmail",
     "structuredOutput",
     "embeddingGenerator",
     "similaritySearch",
@@ -154,6 +155,10 @@ export class ProcessorRegistry {
       {
         pattern: /discord|gaming|community|server/i,
         types: ["discord"],
+      },
+      {
+        pattern: /gmail|email|mail/i,
+        types: ["gmail"],
       },
       {
         pattern: /embed|vector/i,

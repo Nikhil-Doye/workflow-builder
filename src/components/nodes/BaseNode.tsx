@@ -15,6 +15,7 @@ import {
   Database,
   MessageSquare,
   Bot,
+  Mail,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -29,6 +30,7 @@ const nodeIcons: Record<NodeType, React.ComponentType<any>> = {
   database: Database,
   slack: MessageSquare,
   discord: Bot,
+  gmail: Mail,
 };
 
 const nodeColors: Record<
@@ -94,6 +96,12 @@ const nodeColors: Record<
     border: "border-indigo-200",
     icon: "text-indigo-600",
     accent: "bg-indigo-500",
+  },
+  gmail: {
+    bg: "bg-red-50",
+    border: "border-red-200",
+    icon: "text-red-600",
+    accent: "bg-red-500",
   },
 };
 

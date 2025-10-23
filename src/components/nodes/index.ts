@@ -12,3 +12,5 @@ export { UnifiedDatabaseNode } from "./UnifiedDatabaseNode";
 export { SlackNode } from "./SlackNode";
 // Discord node
 export { DiscordNode } from "./DiscordNode";
+// Gmail node
+export { GmailNode } from "./GmailNode";

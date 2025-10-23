@@ -50,6 +50,7 @@ import { EmbeddingWizard } from "./wizards/EmbeddingWizard";
 import { SimilaritySearchWizard } from "./wizards/SimilaritySearchWizard";
 import { StructuredOutputWizard } from "./wizards/StructuredOutputWizard";
 import { DiscordWizard } from "./wizards/DiscordWizard";
+import { GmailWizard } from "./wizards/GmailWizard";
 
 const WIZARD_STEPS: Record<NodeType, WizardStep[]> = {
   dataInput: [
@@ -158,6 +159,17 @@ const WIZARD_STEPS: Record<NodeType, WizardStep[]> = {
       helpText: "Set up your Discord operation parameters",
     },
   ],
+  // Gmail integration
+  gmail: [
+    {
+      id: "gmail-config",
+      title: "Gmail Integration",
+      description: "Configure your Gmail integration",
+      component: GmailWizard,
+      validation: (data: any) => !!data.operation && !!data.accessToken,
+      helpText: "Set up your Gmail operation parameters",
+    },
+  ],
 };
 
 export const ConfigurationWizard: React.FC<ConfigurationWizardProps> = ({
@@ -221,6 +233,7 @@ export const ConfigurationWizard: React.FC<ConfigurationWizardProps> = ({
       database: "Database Operations",
       slack: "Slack Integration",
       discord: "Discord Integration",
+      gmail: "Gmail Integration",
     };
     return labels[type] || "New Node";
   };

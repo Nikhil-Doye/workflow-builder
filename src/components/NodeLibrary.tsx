@@ -43,6 +43,7 @@ export const NodeLibrary: React.FC = () => {
     "database",
     "slack",
     "discord",
+    "gmail",
   ];
 
   const nodeTypeColors: Record<NodeType, string> = {
@@ -56,6 +57,7 @@ export const NodeLibrary: React.FC = () => {
     database: "cyan",
     slack: "purple",
     discord: "indigo",
+    gmail: "red",
   };
 
   const nodeTypesByCategory = getNodeTypesByCategory();

@@ -140,6 +140,18 @@ const NODE_COMPATIBILITY: Record<
     description:
       "Discord nodes typically send messages and updates to community channels",
   },
+  gmail: {
+    canConnectTo: ["dataOutput"],
+    shouldConnectTo: ["dataOutput"],
+    commonPatterns: [
+      "Process → Send email",
+      "Generate report → Email results",
+      "Data analysis → Email summary",
+      "Notifications → Email alerts",
+    ],
+    description:
+      "Gmail nodes typically send emails and notifications to recipients",
+  },
 };
 
 /**

@@ -171,6 +171,28 @@ export const nodeTypeConfigs: Record<NodeType, NodeTypeConfig> = {
       "Welcome new members",
     ],
   },
+  gmail: {
+    technicalName: "gmail",
+    userFriendlyName: "Gmail Integration",
+    description:
+      "Send, read, manage emails, labels, drafts, and search Gmail messages",
+    category: "Communication",
+    icon: "📧",
+    helpText:
+      "Integrate with Gmail to send emails, read messages, manage labels, create drafts, and search your inbox. Perfect for email automation and communication workflows.",
+    commonUseCases: [
+      "Send automated emails",
+      "Read and process incoming emails",
+      "Reply to emails automatically",
+      "Forward important messages",
+      "Create and manage email drafts",
+      "Organize emails with labels",
+      "Search emails with filters",
+      "Handle email attachments",
+      "Email marketing campaigns",
+      "Customer support automation",
+    ],
+  },
 };
 
 export const getNodeTypeConfig = (nodeType: NodeType): NodeTypeConfig => {

@@ -36,6 +36,8 @@ import {
   SlackNode,
   // Discord node
   DiscordNode,
+  // Gmail node
+  GmailNode,
 } from "./nodes";
 import { NodeData } from "../types";
 import { Grid, Trash2, Sparkles, X, Lightbulb, Play } from "lucide-react";
@@ -54,6 +56,8 @@ const nodeTypes: NodeTypes = {
   slack: SlackNode,
   // Discord node
   discord: DiscordNode,
+  // Gmail node
+  gmail: GmailNode,
 };
 
 interface WorkflowEditorProps {

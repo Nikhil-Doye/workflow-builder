@@ -21,7 +21,9 @@ export type NodeType =
   | "database"
   // Slack integration
   | "slack"
-  | "discord";
+  | "discord"
+  // Gmail integration
+  | "gmail";
 
 export type NodeStatus =
   | "idle"

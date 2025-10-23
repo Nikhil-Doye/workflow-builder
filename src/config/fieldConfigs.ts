@@ -388,6 +388,42 @@ export const fieldConfigs: Record<string, FieldConfig> = {
       maxLength: 50,
     },
   },
+
+  // Gmail-specific fields
+  "gmail.accessToken": {
+    technicalName: "accessToken",
+    userFriendlyName: "Gmail Access Token",
+    description: "Your Gmail API access token for authentication",
+    helpText:
+      "OAuth2 access token for Gmail API. This allows the workflow to access your Gmail account.",
+    examples: [
+      "ya29.a0AfH6SMC... (OAuth2 token)",
+      "Obtain from Google Cloud Console",
+    ],
+    validation: {
+      required: true,
+    },
+  },
+  "gmail.operation": {
+    technicalName: "operation",
+    userFriendlyName: "Gmail operation",
+    description: "Choose what type of Gmail operation to perform",
+    helpText:
+      "Select the type of Gmail operation you want to perform. Each operation has different configuration options.",
+    examples: [
+      "Send - Send emails with attachments",
+      "Read - Read emails and threads",
+      "Reply - Reply to specific messages",
+      "Forward - Forward emails",
+      "Draft - Create and manage drafts",
+      "Label - Manage labels and folders",
+      "Search - Search emails with filters",
+      "Attachment - Handle file attachments",
+    ],
+    validation: {
+      required: true,
+    },
+  },
 };
 
 export const getFieldConfig = (
@@ -426,6 +462,7 @@ export const getFieldsForNodeType = (nodeType: string): string[] => {
     database: ["connectionId", "operation", "label"],
     slack: ["botToken", "operation", "label"],
     discord: ["botToken", "operation", "label"],
+    gmail: ["accessToken", "operation", "label"],
   };
 
   return fieldMappings[nodeType] || [];
