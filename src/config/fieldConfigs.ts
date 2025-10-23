@@ -220,6 +220,24 @@ export const fieldConfigs: Record<string, FieldConfig> = {
       required: true,
     },
   },
+  operation: {
+    technicalName: "operation",
+    userFriendlyName: "Database operation",
+    description: "Choose what type of database operation to perform",
+    helpText:
+      "Select the type of database operation you want to perform. Each operation has different configuration options.",
+    examples: [
+      "Query - Retrieve data from database",
+      "Insert - Add new records",
+      "Update - Modify existing records",
+      "Delete - Remove records",
+      "Aggregate - Count, sum, average data",
+      "Transaction - Multiple operations together",
+    ],
+    validation: {
+      required: true,
+    },
+  },
 
   // Output Fields
   format: {
@@ -353,10 +371,7 @@ export const getFieldsForNodeType = (nodeType: string): string[] => {
     similaritySearch: ["vectorStore", "topK", "threshold", "label"],
     structuredOutput: ["schema", "model", "label"],
     dataOutput: ["format", "filename", "label"],
-    databaseQuery: ["connectionId", "query", "table", "label"],
-    databaseInsert: ["connectionId", "table", "label"],
-    databaseUpdate: ["connectionId", "table", "label"],
-    databaseDelete: ["connectionId", "table", "label"],
+    database: ["connectionId", "operation", "label"],
   };
 
   return fieldMappings[nodeType] || [];
