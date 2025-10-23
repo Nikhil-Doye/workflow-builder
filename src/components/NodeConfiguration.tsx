@@ -257,6 +257,41 @@ const nodeTypeConfigs: Record<
       },
     ],
   },
+  slack: {
+    title: "Slack Integration Configuration",
+    fields: [
+      {
+        key: "botToken",
+        label: "Bot Token",
+        type: "text",
+        placeholder: "xoxb-your-bot-token",
+      },
+      {
+        key: "operation",
+        label: "Operation Type",
+        type: "select",
+        options: ["message", "channel", "user", "file", "reaction", "reminder"],
+      },
+      {
+        key: "channel",
+        label: "Channel (for message/channel operations)",
+        type: "text",
+        placeholder: "#general or @username",
+      },
+      {
+        key: "text",
+        label: "Message Text",
+        type: "textarea",
+        placeholder: "Hello from the workflow!",
+      },
+      {
+        key: "user",
+        label: "User ID (for user operations)",
+        type: "text",
+        placeholder: "U1234567890",
+      },
+    ],
+  },
 };
 
 export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
