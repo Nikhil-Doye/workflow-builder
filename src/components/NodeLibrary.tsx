@@ -42,6 +42,7 @@ export const NodeLibrary: React.FC = () => {
     "dataOutput",
     "database",
     "slack",
+    "discord",
   ];
 
   const nodeTypeColors: Record<NodeType, string> = {
