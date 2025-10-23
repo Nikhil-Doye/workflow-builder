@@ -526,6 +526,7 @@ Return only the optimized prompt:`,
           min={field.min}
           max={field.max}
           step={field.step}
+          nodeType={data.type}
         />
         {data.type === "llmTask" && field.key === "prompt" && (
           <div className="flex items-center space-x-2">
@@ -577,6 +578,7 @@ Return only the optimized prompt:`,
             onChange={handleLabelChange}
             type="text"
             placeholder="Enter node label"
+            nodeType={data.type}
           />
 
           {config.fields.map((field) => (

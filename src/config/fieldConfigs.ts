@@ -220,7 +220,8 @@ export const fieldConfigs: Record<string, FieldConfig> = {
       required: true,
     },
   },
-  operation: {
+  // Database operation field
+  "database.operation": {
     technicalName: "operation",
     userFriendlyName: "Database operation",
     description: "Choose what type of database operation to perform",
@@ -233,6 +234,25 @@ export const fieldConfigs: Record<string, FieldConfig> = {
       "Delete - Remove records",
       "Aggregate - Count, sum, average data",
       "Transaction - Multiple operations together",
+    ],
+    validation: {
+      required: true,
+    },
+  },
+  // Slack operation field
+  "slack.operation": {
+    technicalName: "operation",
+    userFriendlyName: "Slack operation",
+    description: "Choose what type of Slack operation to perform",
+    helpText:
+      "Select the type of Slack operation you want to perform. Each operation has different configuration options.",
+    examples: [
+      "Message - Send messages to channels or users",
+      "Channel - Create, archive, or manage channels",
+      "User - Invite, remove, or manage users",
+      "File - Upload and manage files",
+      "Reaction - Add/remove reactions to messages",
+      "Reminder - Set reminders for users",
     ],
     validation: {
       required: true,
@@ -350,7 +370,19 @@ export const fieldConfigs: Record<string, FieldConfig> = {
   },
 };
 
-export const getFieldConfig = (fieldName: string): FieldConfig | null => {
+export const getFieldConfig = (
+  fieldName: string,
+  nodeType?: string
+): FieldConfig | null => {
+  // First try to get node-specific field config
+  if (nodeType) {
+    const nodeSpecificKey = `${nodeType}.${fieldName}`;
+    if (fieldConfigs[nodeSpecificKey]) {
+      return fieldConfigs[nodeSpecificKey];
+    }
+  }
+
+  // Fallback to generic field config
   return fieldConfigs[fieldName] || null;
 };
 

@@ -23,6 +23,7 @@ interface FieldWithHelpProps {
   max?: number;
   step?: number;
   className?: string;
+  nodeType?: string;
 }
 
 export const FieldWithHelp: React.FC<FieldWithHelpProps> = ({
@@ -37,9 +38,10 @@ export const FieldWithHelp: React.FC<FieldWithHelpProps> = ({
   max,
   step,
   className = "",
+  nodeType,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
-  const fieldConfig = getFieldConfig(fieldName);
+  const fieldConfig = getFieldConfig(fieldName, nodeType);
 
   if (!fieldConfig) {
     // Fallback for unknown fields
