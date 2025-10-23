@@ -308,28 +308,6 @@ function wouldCreateCircularDependency(
   targetId: string,
   existingEdges: Edge[]
 ): boolean {
-  // Simple DFS to check for cycles
-  const visited = new Set<string>();
-  const recStack = new Set<string>();
-
-  function hasCycle(nodeId: string): boolean {
-    if (recStack.has(nodeId)) return true;
-    if (visited.has(nodeId)) return false;
-
-    visited.add(nodeId);
-    recStack.add(nodeId);
-
-    const outgoingEdges = existingEdges.filter(
-      (edge) => edge.source === nodeId
-    );
-    for (const edge of outgoingEdges) {
-      if (hasCycle(edge.target)) return true;
-    }
-
-    recStack.delete(nodeId);
-    return false;
-  }
-
   // Add the new connection temporarily
   const tempEdges = [
     ...existingEdges,

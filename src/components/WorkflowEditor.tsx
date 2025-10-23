@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState, useMemo } from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -69,7 +69,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     togglePanel,
     updateNodePosition,
   } = useWorkflowStore();
-  const nodes = currentWorkflow?.nodes || [];
+  const nodes = useMemo(() => currentWorkflow?.nodes || [], [currentWorkflow?.nodes]);
   const edges = currentWorkflow?.edges || [];
   const [showConfig, setShowConfig] = useState(false);
   const [showCopilot, setShowCopilot] = useState(false);
