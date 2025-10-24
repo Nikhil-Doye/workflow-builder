@@ -92,6 +92,9 @@ Categories:
 - JOB_APPLICATION: Job application automation
 - DOCUMENT_PROCESSING: Handle PDFs, documents
 - DATA_INTEGRATION: Combine multiple data sources
+- DATABASE_OPERATIONS: Database queries and updates
+- NOTIFICATION_SENDING: Send alerts and messages
+- EMAIL_AUTOMATION: Email sending and management
 - WORKFLOW_ORCHESTRATION: Complex multi-step processes
 - MIXED: Multiple distinct operations
 
@@ -183,6 +186,13 @@ Extract:
 - Processing steps: what transformations are needed
 - Target sites: job boards, news sites, etc.
 - Data sources: resume, documents, etc.
+- Database operations: query, insert, update, delete, etc.
+- Slack channels: channel names or mentions
+- Discord channels: channel names or mentions
+- Email recipients: email addresses or recipient types
+- Database types: PostgreSQL, MongoDB, MySQL, etc.
+- Notification types: reminder, alert, report, etc.
+- Email types: reminder, report, notification, etc.
 
 Respond with JSON:
 {
@@ -192,7 +202,14 @@ Respond with JSON:
   "aiTasks": ["summarize", "extract key points"],
   "processingSteps": ["scrape content", "analyze with AI", "format output"],
   "targetSites": ["job boards"],
-  "dataSources": ["resume"]
+  "dataSources": ["resume"],
+  "databaseOps": ["query", "insert"],
+  "slackChannels": ["#general", "#notifications"],
+  "discordChannels": ["#announcements"],
+  "emailRecipients": ["team@company.com"],
+  "databaseTypes": ["PostgreSQL", "MongoDB"],
+  "notificationTypes": ["reminder", "alert"],
+  "emailTypes": ["report", "notification"]
 }
 `;
 
@@ -275,6 +292,10 @@ Available node types and their purposes:
 - structuredOutput: Format data according to JSON schemas
 - embeddingGenerator: Create vector embeddings for text
 - similaritySearch: Find similar content using vector search
+- database: Perform database operations (query, insert, update, delete)
+- slack: Send messages and notifications to Slack channels
+- discord: Send messages and notifications to Discord channels
+- gmail: Send emails and manage Gmail communications
 - dataOutput: Export results in various formats
 
 Instructions:
@@ -310,6 +331,24 @@ For AI analysis workflows, consider:
 - AI processing with appropriate prompts
 - Result formatting and structuring
 - Output generation
+
+For database workflows, consider:
+- Data input and validation
+- Database connection and query execution
+- Data processing and transformation
+- Result formatting and output
+
+For notification workflows, consider:
+- Data processing and message preparation
+- Channel/recipient selection
+- Message formatting and personalization
+- Delivery confirmation and logging
+
+For email workflows, consider:
+- Email content generation
+- Recipient management
+- Template processing
+- Delivery tracking
 
 Respond with valid JSON only:
 {
@@ -810,6 +849,14 @@ Respond with valid JSON only:
       processingSteps: [],
       targetSites: [],
       dataSources: [],
+      // New entity types
+      databaseOps: [],
+      slackChannels: [],
+      discordChannels: [],
+      emailRecipients: [],
+      databaseTypes: [],
+      notificationTypes: [],
+      emailTypes: [],
     };
 
     // Extract URLs
@@ -859,6 +906,50 @@ Respond with valid JSON only:
     if (input.includes("news")) entities.targetSites!.push("news sites");
     if (input.includes("blog")) entities.targetSites!.push("blog sites");
 
+    // Extract new entity types
+    // Database operations
+    if (input.includes("query") || input.includes("select"))
+      entities.databaseOps!.push("query");
+    if (input.includes("insert") || input.includes("create"))
+      entities.databaseOps!.push("insert");
+    if (input.includes("update") || input.includes("modify"))
+      entities.databaseOps!.push("update");
+    if (input.includes("delete") || input.includes("remove"))
+      entities.databaseOps!.push("delete");
+
+    // Slack channels
+    if (input.includes("slack")) {
+      entities.notificationTypes!.push("slack");
+      if (input.includes("channel")) entities.slackChannels!.push("#general");
+    }
+
+    // Discord channels
+    if (input.includes("discord")) {
+      entities.notificationTypes!.push("discord");
+      if (input.includes("channel"))
+        entities.discordChannels!.push("#announcements");
+    }
+
+    // Email recipients
+    if (input.includes("email") || input.includes("gmail")) {
+      entities.emailTypes!.push("notification");
+      if (input.includes("team"))
+        entities.emailRecipients!.push("team@company.com");
+    }
+
+    // Notification types
+    if (input.includes("reminder"))
+      entities.notificationTypes!.push("reminder");
+    if (input.includes("alert")) entities.notificationTypes!.push("alert");
+    if (input.includes("report")) entities.notificationTypes!.push("report");
+
+    // Database types
+    if (input.includes("postgresql") || input.includes("postgres"))
+      entities.databaseTypes!.push("PostgreSQL");
+    if (input.includes("mongodb") || input.includes("mongo"))
+      entities.databaseTypes!.push("MongoDB");
+    if (input.includes("mysql")) entities.databaseTypes!.push("MySQL");
+
     return entities;
   }
 
@@ -875,6 +966,24 @@ Respond with valid JSON only:
         : [],
       targetSites: Array.isArray(data.targetSites) ? data.targetSites : [],
       dataSources: Array.isArray(data.dataSources) ? data.dataSources : [],
+      // New entity types
+      databaseOps: Array.isArray(data.databaseOps) ? data.databaseOps : [],
+      slackChannels: Array.isArray(data.slackChannels)
+        ? data.slackChannels
+        : [],
+      discordChannels: Array.isArray(data.discordChannels)
+        ? data.discordChannels
+        : [],
+      emailRecipients: Array.isArray(data.emailRecipients)
+        ? data.emailRecipients
+        : [],
+      databaseTypes: Array.isArray(data.databaseTypes)
+        ? data.databaseTypes
+        : [],
+      notificationTypes: Array.isArray(data.notificationTypes)
+        ? data.notificationTypes
+        : [],
+      emailTypes: Array.isArray(data.emailTypes) ? data.emailTypes : [],
     };
   }
 

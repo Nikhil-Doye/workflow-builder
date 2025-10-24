@@ -314,6 +314,76 @@ function generateNodeSequence(
     });
   }
 
+  // Database operations
+  if (intent === "DATABASE_OPERATIONS" || entities.databaseOps?.length > 0) {
+    nodes.push({
+      id: "database-query",
+      type: "database",
+      label: "Database Operation",
+      config: {
+        operation: determineDatabaseOperation(entities),
+        query: generateDatabaseQuery(entities),
+        connectionId: "{{connectionId}}",
+      },
+    });
+  }
+
+  // Slack notifications
+  if (
+    intent === "NOTIFICATION_SENDING" ||
+    entities.slackChannels?.length > 0 ||
+    entities.notificationTypes?.includes("slack") ||
+    entities.notificationTypes?.includes("reminder")
+  ) {
+    nodes.push({
+      id: "slack-notification",
+      type: "slack",
+      label: "Slack Notification",
+      config: {
+        channel: entities.slackChannels?.[0] || "{{channel}}",
+        message: generateSlackMessage(entities),
+        botToken: "{{slackToken}}",
+      },
+    });
+  }
+
+  // Discord notifications
+  if (
+    intent === "NOTIFICATION_SENDING" ||
+    entities.discordChannels?.length > 0 ||
+    entities.notificationTypes?.includes("discord")
+  ) {
+    nodes.push({
+      id: "discord-notification",
+      type: "discord",
+      label: "Discord Notification",
+      config: {
+        channel: entities.discordChannels?.[0] || "{{channel}}",
+        message: generateDiscordMessage(entities),
+        botToken: "{{discordToken}}",
+      },
+    });
+  }
+
+  // Gmail operations
+  if (
+    intent === "EMAIL_AUTOMATION" ||
+    entities.emailRecipients?.length > 0 ||
+    entities.emailTypes?.length > 0
+  ) {
+    nodes.push({
+      id: "gmail-send",
+      type: "gmail",
+      label: "Send Email",
+      config: {
+        to: entities.emailRecipients?.[0] || "{{recipient}}",
+        subject: generateEmailSubject(entities),
+        body: generateEmailBody(entities),
+        credentials: "{{gmailCredentials}}",
+      },
+    });
+  }
+
   // Ensure PDF workflows have at least one processing node
   if (inputDataType === "pdf" && nodes.length === 1) {
     // Only data input node exists, add a default AI analyzer
@@ -636,6 +706,10 @@ function estimateExecutionTime(nodes: WorkflowNodeStructure[]): number {
     llmTask: 3000,
     structuredOutput: 2000,
     similaritySearch: 4000,
+    database: 3000,
+    slack: 2000,
+    discord: 2000,
+    gmail: 3000,
     dataOutput: 0,
   };
 
@@ -671,4 +745,117 @@ function generateValidationRules(nodes: WorkflowNodeStructure[]): string[] {
   }
 
   return rules;
+}
+
+/**
+ * Determine database operation from entities
+ */
+function determineDatabaseOperation(entities: any): string {
+  if (
+    entities.databaseOps?.includes("query") ||
+    entities.databaseOps?.includes("select")
+  ) {
+    return "query";
+  }
+  if (
+    entities.databaseOps?.includes("insert") ||
+    entities.databaseOps?.includes("create")
+  ) {
+    return "insert";
+  }
+  if (
+    entities.databaseOps?.includes("update") ||
+    entities.databaseOps?.includes("modify")
+  ) {
+    return "update";
+  }
+  if (
+    entities.databaseOps?.includes("delete") ||
+    entities.databaseOps?.includes("remove")
+  ) {
+    return "delete";
+  }
+  return "query";
+}
+
+/**
+ * Generate database query from entities
+ */
+function generateDatabaseQuery(entities: any): string {
+  const operation = determineDatabaseOperation(entities);
+
+  if (operation === "query") {
+    return "SELECT * FROM {{table}} WHERE {{condition}}";
+  }
+  if (operation === "insert") {
+    return "INSERT INTO {{table}} ({{columns}}) VALUES ({{values}})";
+  }
+  if (operation === "update") {
+    return "UPDATE {{table}} SET {{set_clause}} WHERE {{condition}}";
+  }
+  if (operation === "delete") {
+    return "DELETE FROM {{table}} WHERE {{condition}}";
+  }
+  return "SELECT * FROM {{table}}";
+}
+
+/**
+ * Generate Slack message from entities
+ */
+function generateSlackMessage(entities: any): string {
+  if (entities.notificationTypes?.includes("reminder")) {
+    return "🔔 Daily Reminder: {{input.output}}";
+  }
+  if (entities.notificationTypes?.includes("alert")) {
+    return "⚠️ Alert: {{input.output}}";
+  }
+  if (entities.notificationTypes?.includes("report")) {
+    return "📊 Report: {{input.output}}";
+  }
+  return "{{input.output}}";
+}
+
+/**
+ * Generate Discord message from entities
+ */
+function generateDiscordMessage(entities: any): string {
+  if (entities.notificationTypes?.includes("reminder")) {
+    return "🔔 **Daily Reminder**: {{input.output}}";
+  }
+  if (entities.notificationTypes?.includes("alert")) {
+    return "⚠️ **Alert**: {{input.output}}";
+  }
+  if (entities.notificationTypes?.includes("report")) {
+    return "📊 **Report**: {{input.output}}";
+  }
+  return "{{input.output}}";
+}
+
+/**
+ * Generate email subject from entities
+ */
+function generateEmailSubject(entities: any): string {
+  if (entities.emailTypes?.includes("reminder")) {
+    return "Daily Reminder - {{date}}";
+  }
+  if (entities.emailTypes?.includes("report")) {
+    return "Daily Report - {{date}}";
+  }
+  if (entities.emailTypes?.includes("notification")) {
+    return "Notification - {{date}}";
+  }
+  return "Message from Workflow";
+}
+
+/**
+ * Generate email body from entities
+ */
+function generateEmailBody(entities: any): string {
+  if (entities.emailTypes?.includes("reminder")) {
+    return "Hello,\n\nThis is your daily reminder:\n\n{{input.output}}\n\nBest regards,\nAutomated Workflow";
+  }
+  if (entities.emailTypes?.includes("report")) {
+    return "Hello,\n\nPlease find the daily report below:\n\n{{input.output}}\n\nBest regards,\nAutomated Workflow";
+  }
+  return "{{input.output}}";
 }

@@ -98,6 +98,14 @@ export interface EntityExtraction {
   processingSteps: string[];
   targetSites?: string[];
   dataSources?: string[];
+  // New entity types for new node types
+  databaseOps?: string[];
+  slackChannels?: string[];
+  discordChannels?: string[];
+  emailRecipients?: string[];
+  databaseTypes?: string[];
+  notificationTypes?: string[];
+  emailTypes?: string[];
 }
 
 export interface MixedIntentAnalysis {
