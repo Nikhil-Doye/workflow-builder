@@ -1,10 +1,46 @@
 # Agent Workflow Builder
 
-> **AI workflow builder that turns plain English into complex automation pipelines with drag-and-drop magic ✨**
+**AI workflow builder that turns plain English into complex automation pipelines with drag-and-drop magic ✨**
 
 An open-source, visual workflow builder for creating AI-powered agent workflows, similar to N8N or Zapier, built with React Flow and modern web technologies. Create sophisticated automation workflows with AI models, web scraping, and data processing capabilities.
 
 **🚀 Build AI workflows without code: describe, drag, drop, execute. Like Zapier but smarter!**
+
+## Data Flow Architecture
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as React UI
+    participant S as Zustand Store
+    participant E as Execution Engine
+    participant P as Processors
+    participant A as AI Services
+    participant D as Database/APIs
+
+    U->>UI: Create/Edit Workflow
+    UI->>S: Update Workflow State
+    S->>UI: Re-render Components
+
+    U->>UI: Execute Workflow
+    UI->>S: Trigger Execution
+    S->>E: Start Execution Engine
+
+    E->>E: Create Execution Plan
+    E->>E: Validate Workflow
+    E->>P: Execute Node Processors
+
+    P->>A: Call AI Services
+    A-->>P: Return Results
+    P->>D: Call External APIs
+    D-->>P: Return Data
+
+    P-->>E: Node Results
+    E->>S: Update Execution State
+    S->>UI: Update UI with Results
+    UI-->>U: Show Execution Results
+```
+
 
 ## 🚀 Features
 
