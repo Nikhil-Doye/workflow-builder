@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import toast from "react-hot-toast";
 import { BaseNode } from "./BaseNode";
 import { NodeData } from "../../types";
 import { NodeProps } from "reactflow";
@@ -8,6 +9,7 @@ import {
   validatePDFFile,
   getPDFInfo,
 } from "../../services/pdfService";
+import { useWorkflowStore } from "../../store/workflowStore";
 
 interface DataInputNodeProps extends NodeProps {
   data: NodeData;
@@ -18,6 +20,9 @@ export const DataInputNode: React.FC<DataInputNodeProps> = (props) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Access workflow store to update node data properly
+  const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
+
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -27,36 +32,70 @@ export const DataInputNode: React.FC<DataInputNodeProps> = (props) => {
     // Validate file
     const validation = validatePDFFile(file);
     if (!validation.isValid) {
-      alert(validation.error);
+      toast.error(validation.error || "Invalid PDF file");
       return;
     }
 
     setUploadedFile(file);
     setIsProcessing(true);
 
+    const toastId = toast.loading(`Processing ${file.name}...`);
+
     try {
       // Process PDF file
-      const result = await processPDF({ file, extractText: true });
+      const result = await processPDF({
+        file,
+        extractText: true,
+        extractMetadata: true,
+      });
 
       if (result.success && result.data?.text) {
-        // Update the node's output with the extracted text
-        props.data.outputs = [
+        // Update the node's output via workflow store (proper state management)
+        const outputData = [
           {
             output: result.data.text,
-            metadata: result.data.metadata,
+            metadata: {
+              ...result.data.metadata,
+              fileName: file.name,
+              fileSize: file.size,
+              processedAt: new Date().toISOString(),
+            },
           },
         ];
-        console.log(
-          "PDF processing complete. Text length:",
-          result.data.text.length
+
+        // Update workflow state - this ensures data flows correctly to execution engine
+        updateNodeData(props.id, {
+          outputs: outputData,
+          config: {
+            ...props.data.config,
+            // Store default value for execution
+            defaultValue: result.data.text,
+          },
+        });
+
+        toast.success(
+          `✓ PDF processed successfully!\nExtracted ${result.data.text.length.toLocaleString()} characters`,
+          {
+            id: toastId,
+            duration: 4000,
+          }
         );
-        console.log("Node outputs updated:", props.data.outputs);
+
+        console.log(`[DataInputNode] PDF processed for node ${props.id}:`, {
+          textLength: result.data.text.length,
+          metadata: result.data.metadata,
+        });
       } else {
-        alert(result.error || "Failed to process PDF");
+        toast.error(result.error || "Failed to process PDF", { id: toastId });
       }
     } catch (error) {
-      console.error("Error processing PDF:", error);
-      alert("Error processing PDF file");
+      console.error("[DataInputNode] Error processing PDF:", error);
+      toast.error(
+        `Error processing PDF: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        { id: toastId }
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -64,10 +103,21 @@ export const DataInputNode: React.FC<DataInputNodeProps> = (props) => {
 
   const handleRemoveFile = () => {
     setUploadedFile(null);
-    props.data.outputs = [];
+
+    // Clear outputs via workflow store
+    updateNodeData(props.id, {
+      outputs: [],
+      config: {
+        ...props.data.config,
+        defaultValue: "",
+      },
+    });
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+
+    toast.success("File removed");
   };
 
   const handleUploadClick = () => {
