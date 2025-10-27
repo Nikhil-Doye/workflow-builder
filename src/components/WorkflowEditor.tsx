@@ -29,6 +29,7 @@ import { ConnectionSuggestions } from "./ConnectionSuggestions";
 import { ConnectionValidation } from "./ConnectionValidation";
 import { InteractiveTutorial } from "./InteractiveTutorial";
 import { ExecutionLogger } from "./ExecutionLogger";
+import { WorkflowValidationPanel } from "./WorkflowValidationPanel";
 import {
   WebScrapingNode,
   LLMNode,
@@ -55,11 +56,15 @@ import {
   Lightbulb,
   Play,
   Activity,
+  CheckCircle,
+  AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
 import {
   executionEventBus,
   ExecutionEvent,
 } from "../services/executionEventBus";
+import { workflowValidationEngine } from "../services/workflowValidationEngine";
 
 const nodeTypes: NodeTypes = {
   webScraping: WebScrapingNode,
@@ -116,6 +121,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
   const [activeExecutionId, setActiveExecutionId] = useState<string | null>(
     null
   );
+  const [showValidationPanel, setShowValidationPanel] = useState(true);
   const [executionMetrics, setExecutionMetrics] = useState<{
     completedNodes: number;
     failedNodes: number;
@@ -343,6 +349,45 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
           {/* Secondary Toolbar */}
           <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6">
             <div className="flex items-center space-x-4">
+              {/* Validation Status Badge */}
+              {(() => {
+                const result = workflowValidationEngine.validate(nodes, edges);
+                return (
+                  <button
+                    onClick={() => setShowValidationPanel(!showValidationPanel)}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                      result.isValid && result.warnings.length === 0
+                        ? "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
+                        : result.errors.length > 0
+                        ? "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 animate-pulse"
+                        : "bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100"
+                    }`}
+                    title="Click to toggle validation panel"
+                  >
+                    {result.isValid && result.warnings.length === 0 ? (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        <span className="text-xs font-medium">Valid</span>
+                      </>
+                    ) : result.errors.length > 0 ? (
+                      <>
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-xs font-medium">
+                          {result.errors.length} Issues
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="w-4 h-4" />
+                        <span className="text-xs font-medium">
+                          {result.warnings.length} Warnings
+                        </span>
+                      </>
+                    )}
+                  </button>
+                );
+              })()}
+
               <button
                 onClick={() => togglePanel("nodeLibrary")}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
@@ -544,6 +589,15 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
               />
             </div>
           </div>
+        )}
+
+        {/* Workflow Validation Panel */}
+        {showValidationPanel && (
+          <WorkflowValidationPanel
+            nodes={nodes}
+            edges={edges}
+            onClose={() => setShowValidationPanel(false)}
+          />
         )}
       </div>
 

@@ -9,6 +9,7 @@ import {
   ExecutionCompleteEvent,
   ExecutionErrorEvent,
 } from "./executionEventBus";
+import { workflowValidationEngine } from "./workflowValidationEngine";
 
 export interface ExecutionContext {
   nodeId: string;
@@ -113,7 +114,15 @@ export class ExecutionEngine {
 
     // Validate workflow before execution
     try {
-      this.validateWorkflowStructure(nodes, edges);
+      // Use comprehensive validation engine
+      const validationResult = workflowValidationEngine.validate(nodes, edges);
+      if (!validationResult.isValid) {
+        // Collect all error messages
+        const errorMessages = validationResult.errors
+          .map((issue) => `${issue.message} - ${issue.suggestion}`)
+          .join("; ");
+        throw new Error(`Workflow validation failed: ${errorMessages}`);
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown validation error";
@@ -1077,93 +1086,6 @@ export class ExecutionEngine {
     }
 
     return circularDeps;
-  }
-
-  // Validate workflow structure before execution
-  private validateWorkflowStructure(nodes: any[], edges: any[]): void {
-    if (!nodes || nodes.length === 0) {
-      throw new Error("Workflow must contain at least one node");
-    }
-
-    const nodeIds = nodes.map((n) => n.id);
-    const edgeIds = new Set<string>();
-
-    // Validate edges
-    for (const edge of edges) {
-      if (!edge.id || !edge.source || !edge.target) {
-        throw new Error(
-          "Invalid edge: missing required properties (id, source, target)"
-        );
-      }
-
-      if (edgeIds.has(edge.id)) {
-        throw new Error(`Duplicate edge ID: ${edge.id}`);
-      }
-      edgeIds.add(edge.id);
-
-      if (!nodeIds.includes(edge.source)) {
-        throw new Error(
-          `Edge references non-existent source node: ${edge.source}`
-        );
-      }
-
-      if (!nodeIds.includes(edge.target)) {
-        throw new Error(
-          `Edge references non-existent target node: ${edge.target}`
-        );
-      }
-
-      if (edge.source === edge.target) {
-        throw new Error(
-          `Self-loop detected: node ${edge.source} cannot connect to itself`
-        );
-      }
-    }
-
-    // Check for circular dependencies
-    const circularDeps = this.detectCircularDependencies(nodeIds, edges);
-    if (circularDeps.length > 0) {
-      throw new Error(
-        `Circular dependencies detected: ${circularDeps.join(", ")}. ` +
-          "Please remove circular connections between nodes before executing the workflow."
-      );
-    }
-
-    // Check for disconnected components (optional warning)
-    const connectedNodes = new Set<string>();
-    const adjacencyList = new Map<string, string[]>();
-
-    // Build adjacency list
-    nodeIds.forEach((id) => adjacencyList.set(id, []));
-    edges.forEach((edge) => {
-      adjacencyList.get(edge.source)!.push(edge.target);
-    });
-
-    // DFS to find connected components
-    const dfs = (nodeId: string) => {
-      if (connectedNodes.has(nodeId)) return;
-      connectedNodes.add(nodeId);
-      adjacencyList.get(nodeId)!.forEach((neighbor) => dfs(neighbor));
-    };
-
-    // Start from nodes with no incoming edges
-    const nodesWithIncomingEdges = new Set(edges.map((e) => e.target));
-    const startNodes = nodeIds.filter((id) => !nodesWithIncomingEdges.has(id));
-
-    if (startNodes.length === 0) {
-      // If no clear start nodes, start from first node
-      dfs(nodeIds[0]);
-    } else {
-      startNodes.forEach((startNode) => dfs(startNode));
-    }
-
-    if (connectedNodes.size < nodeIds.length) {
-      const disconnectedNodes = nodeIds.filter((id) => !connectedNodes.has(id));
-      console.warn(
-        `Disconnected nodes detected: ${disconnectedNodes.join(", ")}. ` +
-          "These nodes may not execute properly."
-      );
-    }
   }
 
   // Check if execution should continue on error
