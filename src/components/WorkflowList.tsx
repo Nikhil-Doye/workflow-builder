@@ -17,12 +17,100 @@ import {
   ArrowRight,
   Clock,
   HelpCircle,
+  Database,
+  MessageSquare,
+  Mail,
+  FileText,
+  Search,
+  GitBranch,
 } from "lucide-react";
 
 interface WorkflowListProps {
   onOpenWorkflow: (workflowId: string) => void;
   onCreateWorkflow: (workflowName?: string) => void;
 }
+
+// Helper function to get node icon
+const getNodeIconComponent = (type: string) => {
+  switch (type) {
+    case "dataInput":
+      return ArrowRight;
+    case "dataOutput":
+      return ArrowRight;
+    case "webScraping":
+      return Globe;
+    case "llmTask":
+      return Brain;
+    case "embeddingGenerator":
+      return Sparkles;
+    case "similaritySearch":
+      return Search;
+    case "structuredOutput":
+      return FileText;
+    case "database":
+      return Database;
+    case "slack":
+      return MessageSquare;
+    case "discord":
+      return MessageSquare;
+    case "gmail":
+      return Mail;
+    default:
+      return Zap;
+  }
+};
+
+// Helper function to get node color
+const getNodeColorClass = (type: string) => {
+  switch (type) {
+    case "dataInput":
+      return "bg-blue-100 text-blue-700 border-blue-200";
+    case "dataOutput":
+      return "bg-orange-100 text-orange-700 border-orange-200";
+    case "webScraping":
+      return "bg-green-100 text-green-700 border-green-200";
+    case "llmTask":
+      return "bg-purple-100 text-purple-700 border-purple-200";
+    case "embeddingGenerator":
+      return "bg-pink-100 text-pink-700 border-pink-200";
+    case "similaritySearch":
+      return "bg-indigo-100 text-indigo-700 border-indigo-200";
+    case "structuredOutput":
+      return "bg-yellow-100 text-yellow-700 border-yellow-200";
+    case "database":
+      return "bg-cyan-100 text-cyan-700 border-cyan-200";
+    case "slack":
+      return "bg-violet-100 text-violet-700 border-violet-200";
+    case "discord":
+      return "bg-indigo-100 text-indigo-700 border-indigo-200";
+    case "gmail":
+      return "bg-red-100 text-red-700 border-red-200";
+    default:
+      return "bg-gray-100 text-gray-700 border-gray-200";
+  }
+};
+
+// Helper function to format node type name
+const formatNodeTypeName = (type: string): string => {
+  const formatted = type.replace(/([A-Z])/g, " $1").trim();
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+};
+
+// Helper function to get node type summary with counts
+const getNodeTypeSummary = (nodes: any[]) => {
+  const typeCounts = new Map<string, number>();
+
+  nodes.forEach((node) => {
+    const count = typeCounts.get(node.type) || 0;
+    typeCounts.set(node.type, count + 1);
+  });
+
+  // Sort by count (descending) and then alphabetically
+  return Array.from(typeCounts.entries()).sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1]; // Sort by count first
+    return a[0].localeCompare(b[0]); // Then alphabetically
+  });
+};
 
 export const WorkflowList: React.FC<WorkflowListProps> = ({
   onOpenWorkflow,
@@ -397,56 +485,57 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
                   </div>
                 </div>
 
-                {/* Node Type Indicators */}
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {workflow.nodes.slice(0, 3).map((node, index) => {
-                    const getNodeIcon = (type: string) => {
-                      switch (type) {
-                        case "dataInput":
-                          return <ArrowRight className="w-3 h-3" />;
-                        case "webScraping":
-                          return <Globe className="w-3 h-3" />;
-                        case "llmTask":
-                          return <Brain className="w-3 h-3" />;
-                        case "dataOutput":
-                          return <ArrowRight className="w-3 h-3" />;
-                        default:
-                          return <Zap className="w-3 h-3" />;
-                      }
-                    };
-                    const getNodeColor = (type: string) => {
-                      switch (type) {
-                        case "dataInput":
-                          return "bg-blue-100 text-blue-600";
-                        case "webScraping":
-                          return "bg-green-100 text-green-600";
-                        case "llmTask":
-                          return "bg-purple-100 text-purple-600";
-                        case "dataOutput":
-                          return "bg-orange-100 text-orange-600";
-                        default:
-                          return "bg-gray-100 text-gray-600";
-                      }
-                    };
-                    return (
-                      <div
-                        key={index}
-                        className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getNodeColor(
-                          node.type
-                        )}`}
-                      >
-                        {getNodeIcon(node.type)}
-                        <span>
-                          {node.type.replace(/([A-Z])/g, " $1").trim()}
+                {/* Node Type Summary with Counts */}
+                <div className="space-y-2 mb-4">
+                  {/* Workflow Stats */}
+                  <div className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="flex items-center space-x-4 text-xs">
+                      <div className="flex items-center space-x-1 text-gray-600">
+                        <GitBranch className="w-3.5 h-3.5" />
+                        <span className="font-medium">
+                          {workflow.nodes.length}
                         </span>
+                        <span className="text-gray-400">nodes</span>
                       </div>
-                    );
-                  })}
-                  {workflow.nodes.length > 3 && (
-                    <div className="flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                      <span>+{workflow.nodes.length - 3} more</span>
+                      <div className="flex items-center space-x-1 text-gray-600">
+                        <ArrowRight className="w-3.5 h-3.5" />
+                        <span className="font-medium">
+                          {workflow.edges.length}
+                        </span>
+                        <span className="text-gray-400">connections</span>
+                      </div>
                     </div>
-                  )}
+                    <div className="text-xs font-medium text-gray-500">
+                      {getNodeTypeSummary(workflow.nodes).length}{" "}
+                      {getNodeTypeSummary(workflow.nodes).length === 1
+                        ? "type"
+                        : "types"}
+                    </div>
+                  </div>
+
+                  {/* Node Type Breakdown */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {getNodeTypeSummary(workflow.nodes).map(([type, count]) => {
+                      const IconComponent = getNodeIconComponent(type);
+                      return (
+                        <div
+                          key={type}
+                          className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border ${getNodeColorClass(
+                            type
+                          )} transition-all duration-200 hover:shadow-sm`}
+                          title={`${count} ${formatNodeTypeName(type)} node${
+                            count > 1 ? "s" : ""
+                          }`}
+                        >
+                          <IconComponent className="w-3.5 h-3.5" />
+                          <span className="font-semibold">{count}</span>
+                          <span className="hidden sm:inline">
+                            {formatNodeTypeName(type)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Action Button */}
