@@ -403,6 +403,12 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
   const config = nodeTypeConfigs[data.type];
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationResult, setOptimizationResult] = useState<string>("");
+  const [isPreviewingOptimization, setIsPreviewingOptimization] =
+    useState(false);
+  const [originalPrompt, setOriginalPrompt] = useState<string>(
+    (currentData.config && currentData.config.prompt) || ""
+  );
+  const [promptHistory, setPromptHistory] = useState<string[]>([]);
 
   // State for label change dialog
   const [showLabelDialog, setShowLabelDialog] = useState(false);
@@ -489,6 +495,7 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
 
     setIsOptimizing(true);
     setOptimizationResult("");
+    setOriginalPrompt(currentData.config.prompt);
 
     try {
       // Extract intent from the prompt itself
@@ -594,6 +601,7 @@ Return only the optimized prompt:`,
       }
 
       setOptimizationResult(cleanedResult);
+      setIsPreviewingOptimization(true);
     } catch (error) {
       console.error("Error optimizing prompt:", error);
       setOptimizationResult("Error optimizing prompt. Please try again.");
@@ -604,9 +612,24 @@ Return only the optimized prompt:`,
 
   const applyOptimizedPrompt = () => {
     if (optimizationResult) {
+      // Save to history for undo
+      setPromptHistory((prev) => [originalPrompt, ...prev].slice(0, 20));
       handleConfigChange("prompt", optimizationResult);
       setOptimizationResult("");
+      setIsPreviewingOptimization(false);
     }
+  };
+
+  const cancelOptimizationPreview = () => {
+    setOptimizationResult("");
+    setIsPreviewingOptimization(false);
+  };
+
+  const undoLastPromptChange = () => {
+    if (promptHistory.length === 0) return;
+    const [last, ...rest] = promptHistory;
+    handleConfigChange("prompt", last);
+    setPromptHistory(rest);
   };
 
   const renderField = (field: FieldConfig) => {
@@ -628,16 +651,57 @@ Return only the optimized prompt:`,
           nodeType={data.type}
         />
         {data.type === "llmTask" && field.key === "prompt" && (
-          <div className="flex items-center space-x-2">
-            <Button
-              onClick={handleOptimizePrompt}
-              disabled={isOptimizing || !currentData.config.prompt}
-              size="sm"
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              {isOptimizing ? "Optimizing..." : "Optimize Prompt"}
-            </Button>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Button
+                onClick={handleOptimizePrompt}
+                disabled={isOptimizing || !currentData.config.prompt}
+                size="sm"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                {isOptimizing ? "Optimizing..." : "Optimize Prompt"}
+              </Button>
+              <Button
+                onClick={undoLastPromptChange}
+                disabled={promptHistory.length === 0}
+                size="sm"
+                variant="outline"
+                title={
+                  promptHistory.length === 0
+                    ? "Nothing to undo"
+                    : "Undo last change"
+                }
+              >
+                Undo
+              </Button>
+            </div>
+            {isPreviewingOptimization && optimizationResult && (
+              <div className="p-3 border rounded-lg bg-gray-50">
+                <div className="text-xs font-medium text-gray-600 mb-2">
+                  Optimized Preview
+                </div>
+                <div className="text-sm whitespace-pre-wrap text-gray-800 max-h-40 overflow-auto">
+                  {optimizationResult}
+                </div>
+                <div className="flex items-center space-x-2 mt-3">
+                  <Button
+                    size="sm"
+                    onClick={applyOptimizedPrompt}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Apply
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={cancelOptimizationPreview}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
