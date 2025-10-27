@@ -2,6 +2,7 @@ import { MongoConnector } from "../connectors/database/MongoConnector";
 import { MySQLConnector } from "../connectors/database/MySQLConnector";
 import { PostgresConnector } from "../connectors/database/PostgresConnector";
 import { ConnectorRegistry } from "../connectors/base/ConnectorRegistry";
+import { secureCredentialManager } from "./secureCredentialManager";
 
 export interface DatabaseConnection {
   id: string;
@@ -11,12 +12,18 @@ export interface DatabaseConnection {
   port: number;
   database: string;
   username?: string;
-  password?: string;
-  connectionString?: string;
+  // SECURITY: Never store plaintext passwords - use credential IDs instead
+  password?: string; // For backward compatibility (will be migrated)
+  passwordCredentialId?: string; // Secure credential ID
+  connectionString?: string; // For backward compatibility (will be migrated)
+  connectionStringCredentialId?: string; // Secure credential ID
   ssl?: boolean;
   status: "connected" | "disconnected" | "error";
   lastTested?: Date;
   error?: string;
+  // Security metadata
+  credentialsEncrypted?: boolean;
+  lastCredentialUpdate?: Date;
 }
 
 export interface ConnectionTestResult {
@@ -43,15 +50,133 @@ class DatabaseConnectionManager {
     this.validateCredentials(connection as DatabaseConnection);
 
     const id = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // SECURITY: Store sensitive credentials securely
+    const secureConnection = await this.secureCredentials(connection, id);
+
     const newConnection: DatabaseConnection = {
-      ...connection,
+      ...secureConnection,
       id,
       status: "disconnected",
+      credentialsEncrypted: true,
+      lastCredentialUpdate: new Date(),
     };
 
     this.connections.set(id, newConnection);
-    this.saveConnections();
+    await this.saveConnections();
     return id;
+  }
+
+  /**
+   * SECURITY: Store sensitive credentials using encryption
+   */
+  private async secureCredentials(
+    connection: Omit<DatabaseConnection, "id" | "status">,
+    connectionId: string
+  ): Promise<Omit<DatabaseConnection, "id" | "status">> {
+    const secured = { ...connection };
+
+    // Secure password if present
+    if (connection.password) {
+      const credId = await secureCredentialManager.storeCredential(
+        connectionId,
+        "password",
+        connection.password,
+        false // Session-only for maximum security
+      );
+      secured.passwordCredentialId = credId;
+      // Remove plaintext password
+      delete secured.password;
+    }
+
+    // Secure connection string if present
+    if (connection.connectionString) {
+      const credId = await secureCredentialManager.storeCredential(
+        connectionId,
+        "connectionString",
+        connection.connectionString,
+        false // Session-only for maximum security
+      );
+      secured.connectionStringCredentialId = credId;
+      // Remove plaintext connection string
+      delete secured.connectionString;
+    }
+
+    return secured;
+  }
+
+  /**
+   * SECURITY: Retrieve decrypted credential securely
+   */
+  private async getSecureCredential(
+    credentialId: string
+  ): Promise<string | null> {
+    return await secureCredentialManager.getCredential(credentialId);
+  }
+
+  /**
+   * Get connection with decrypted credentials (use only when needed)
+   */
+  async getConnectionWithCredentials(
+    id: string
+  ): Promise<DatabaseConnection | null> {
+    const connection = this.connections.get(id);
+    if (!connection) return null;
+
+    const decrypted = { ...connection };
+
+    // Decrypt password if stored securely
+    if (connection.passwordCredentialId) {
+      const password = await this.getSecureCredential(
+        connection.passwordCredentialId
+      );
+      if (password) {
+        decrypted.password = password;
+      }
+    }
+
+    // Decrypt connection string if stored securely
+    if (connection.connectionStringCredentialId) {
+      const connectionString = await this.getSecureCredential(
+        connection.connectionStringCredentialId
+      );
+      if (connectionString) {
+        decrypted.connectionString = connectionString;
+      }
+    }
+
+    return decrypted;
+  }
+
+  /**
+   * Get connection with masked credentials (safe for display)
+   */
+  getConnectionWithMaskedCredentials(id: string): DatabaseConnection | null {
+    const connection = this.connections.get(id);
+    if (!connection) return null;
+
+    const masked = { ...connection };
+
+    // Mask password
+    if (connection.passwordCredentialId || connection.password) {
+      masked.password = secureCredentialManager.maskCredential(
+        "password",
+        "password"
+      );
+    }
+
+    // Mask connection string
+    if (
+      connection.connectionStringCredentialId ||
+      connection.connectionString
+    ) {
+      masked.connectionString = secureCredentialManager.maskCredential(
+        masked.connectionString || "connectionString",
+        "connectionString"
+      );
+    }
+
+    return masked;
   }
 
   async updateConnection(
@@ -61,15 +186,23 @@ class DatabaseConnectionManager {
     const connection = this.connections.get(id);
     if (!connection) return false;
 
-    const updatedConnection = { ...connection, ...updates };
+    // SECURITY: Handle credential updates securely
+    const secureUpdates = await this.secureCredentials(updates, id);
+    const updatedConnection = { ...connection, ...secureUpdates };
 
     // Validate credentials if connection details are being updated
     if (this.hasConnectionDetailsChanged(updates)) {
       this.validateCredentials(updatedConnection);
     }
 
+    // Update credential metadata
+    if (updates.password || updates.connectionString) {
+      updatedConnection.lastCredentialUpdate = new Date();
+      updatedConnection.credentialsEncrypted = true;
+    }
+
     this.connections.set(id, updatedConnection);
-    this.saveConnections();
+    await this.saveConnections();
     return true;
   }
 
@@ -82,8 +215,20 @@ class DatabaseConnectionManager {
       await this.disconnect(id);
     }
 
+    // SECURITY: Delete associated credentials
+    if (connection.passwordCredentialId) {
+      await secureCredentialManager.deleteCredential(
+        connection.passwordCredentialId
+      );
+    }
+    if (connection.connectionStringCredentialId) {
+      await secureCredentialManager.deleteCredential(
+        connection.connectionStringCredentialId
+      );
+    }
+
     this.connections.delete(id);
-    this.saveConnections();
+    await this.saveConnections();
     return true;
   }
 
@@ -103,7 +248,8 @@ class DatabaseConnectionManager {
 
   // Connection Testing & Management
   async testConnection(id: string): Promise<ConnectionTestResult> {
-    const connection = this.connections.get(id);
+    // SECURITY: Get connection with decrypted credentials
+    const connection = await this.getConnectionWithCredentials(id);
     if (!connection) {
       return {
         success: false,
@@ -165,7 +311,8 @@ class DatabaseConnectionManager {
   }
 
   async connect(id: string): Promise<boolean> {
-    const connection = this.connections.get(id);
+    // SECURITY: Get connection with decrypted credentials
+    const connection = await this.getConnectionWithCredentials(id);
     if (!connection) return false;
 
     try {
@@ -442,6 +589,8 @@ class DatabaseConnectionManager {
       if (stored) {
         const connections = JSON.parse(stored);
         connections.forEach((conn: DatabaseConnection) => {
+          // SECURITY: Migrate old plaintext credentials to secure storage
+          this.migrateConnectionCredentials(conn);
           this.connections.set(conn.id, { ...conn, status: "disconnected" });
         });
       }
@@ -450,12 +599,71 @@ class DatabaseConnectionManager {
     }
   }
 
-  private saveConnections(): void {
+  /**
+   * SECURITY: Migrate old plaintext credentials to secure encrypted storage
+   */
+  private async migrateConnectionCredentials(
+    connection: DatabaseConnection
+  ): Promise<void> {
+    let needsMigration = false;
+
+    // Migrate plaintext password
+    if (connection.password && !connection.passwordCredentialId) {
+      const credId = await secureCredentialManager.storeCredential(
+        connection.id,
+        "password",
+        connection.password,
+        false // Session-only for security
+      );
+      connection.passwordCredentialId = credId;
+      delete connection.password; // Remove plaintext
+      needsMigration = true;
+    }
+
+    // Migrate plaintext connection string
+    if (
+      connection.connectionString &&
+      !connection.connectionStringCredentialId
+    ) {
+      const credId = await secureCredentialManager.storeCredential(
+        connection.id,
+        "connectionString",
+        connection.connectionString,
+        false // Session-only for security
+      );
+      connection.connectionStringCredentialId = credId;
+      delete connection.connectionString; // Remove plaintext
+      needsMigration = true;
+    }
+
+    if (needsMigration) {
+      connection.credentialsEncrypted = true;
+      connection.lastCredentialUpdate = new Date();
+      console.log(`Migrated credentials for connection ${connection.id}`);
+    }
+  }
+
+  private async saveConnections(): Promise<void> {
     try {
-      const connections = Array.from(this.connections.values()).map((conn) => ({
-        ...conn,
-        status: "disconnected", // Don't persist connection status
-      }));
+      const connections = Array.from(this.connections.values()).map((conn) => {
+        // SECURITY: Never save plaintext credentials
+        const sanitized = {
+          ...conn,
+          status: "disconnected", // Don't persist connection status
+          password: undefined, // Never save plaintext password
+          connectionString: undefined, // Never save plaintext connection string
+        };
+
+        // Remove undefined fields for cleaner storage
+        Object.keys(sanitized).forEach((key) => {
+          if (sanitized[key as keyof typeof sanitized] === undefined) {
+            delete sanitized[key as keyof typeof sanitized];
+          }
+        });
+
+        return sanitized;
+      });
+
       localStorage.setItem("database_connections", JSON.stringify(connections));
     } catch (error) {
       console.error("Error saving connections:", error);
