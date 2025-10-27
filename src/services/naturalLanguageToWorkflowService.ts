@@ -12,6 +12,7 @@ import {
   validateMixedWorkflow,
   generateImprovementSuggestions,
 } from "../utils/workflowValidator";
+import { parseAndValidate, parseRobustJson } from "./robustJsonParser";
 
 /**
  * Centralized service for converting natural language to workflow structures.
@@ -142,12 +143,30 @@ Respond with JSON:
         maxTokens: 200,
       });
 
-      const result = JSON.parse(response.content);
+      // Use robust JSON parser with validation
+      const parseResult = parseAndValidate(
+        response.content,
+        [
+          { field: "intent", type: "string" },
+          { field: "confidence", type: "number" },
+        ],
+        {
+          logAttempts: true,
+        }
+      );
 
-      // Validate the response structure
-      if (!result.intent || typeof result.confidence !== "number") {
-        throw new Error("Invalid response format from LLM");
+      if (!parseResult.success) {
+        console.error(
+          "Failed to parse LLM intent classification response:",
+          parseResult.error,
+          parseResult.validationErrors
+        );
+        throw new Error(
+          parseResult.error || "Invalid response format from LLM"
+        );
       }
+
+      const result = parseResult.data!;
 
       return {
         intent: result.intent,
@@ -220,7 +239,22 @@ Respond with JSON:
         maxTokens: 300,
       });
 
-      const result = JSON.parse(response.content);
+      // Use robust JSON parser for entity extraction
+      const parseResult = parseRobustJson(response.content, {
+        logAttempts: true,
+      });
+
+      if (!parseResult.success) {
+        console.error(
+          "Failed to parse LLM entity extraction response:",
+          parseResult.error
+        );
+        throw new Error(
+          parseResult.error || "Invalid response format from LLM"
+        );
+      }
+
+      const result = parseResult.data!;
       return this.normalizeEntityExtraction(result);
     } catch (error) {
       console.error("Error in LLM entity extraction:", error);
@@ -385,7 +419,30 @@ Respond with valid JSON only:
         maxTokens: 1000,
       });
 
-      const result = JSON.parse(response.content);
+      // Use robust JSON parser for workflow structure
+      const parseResult = parseAndValidate(
+        response.content,
+        [
+          { field: "nodes", type: "object" },
+          { field: "edges", type: "object" },
+        ],
+        {
+          logAttempts: true,
+        }
+      );
+
+      if (!parseResult.success) {
+        console.error(
+          "Failed to parse LLM workflow generation response:",
+          parseResult.error,
+          parseResult.validationErrors
+        );
+        throw new Error(
+          parseResult.error || "Invalid workflow structure from LLM"
+        );
+      }
+
+      const result = parseResult.data!;
       this.validateWorkflowStructure(result);
       return result;
     } catch (error) {
