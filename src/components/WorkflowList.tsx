@@ -28,7 +28,8 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
   onOpenWorkflow,
   onCreateWorkflow,
 }) => {
-  const { workflows, deleteWorkflow, updateWorkflow } = useWorkflowStore();
+  const { workflows, deleteWorkflow, updateWorkflow, clearAllWorkflows } =
+    useWorkflowStore();
   const [newWorkflowName, setNewWorkflowName] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(
@@ -100,6 +101,16 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
 
   const handleShowOnboarding = () => {
     setShowOnboarding(true);
+  };
+
+  const handleClearAllWorkflows = () => {
+    if (
+      window.confirm(
+        "Are you sure you want to permanently delete ALL workflows? This cannot be undone."
+      )
+    ) {
+      clearAllWorkflows();
+    }
   };
 
   return (
@@ -206,6 +217,16 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
               <Plus className="w-4 h-4" />
               <span className="font-medium">New Workflow</span>
             </button>
+            {workflows.length > 0 && (
+              <button
+                onClick={handleClearAllWorkflows}
+                className="group flex items-center space-x-2 px-6 py-3 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-all duration-200 shadow-sm hover:shadow-md border border-red-200"
+                title="Delete all workflows"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="font-medium">Clear All</span>
+              </button>
+            )}
           </div>
         </div>
 

@@ -22,6 +22,13 @@ import { ApiKeysSettings } from "./ApiKeysSettings";
 import { DatabaseConnectionManager } from "./DatabaseConnectionManager";
 import { WorkflowScheduler } from "./WorkflowScheduler";
 import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "./ui/dialog";
 
 export const WorkflowToolbar: React.FC = () => {
   const {
@@ -39,6 +46,7 @@ export const WorkflowToolbar: React.FC = () => {
   const [showDatabaseManager, setShowDatabaseManager] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleSave = () => {
     if (currentWorkflow) {
@@ -81,7 +89,12 @@ export const WorkflowToolbar: React.FC = () => {
   };
 
   const handleClear = () => {
+    setShowResetConfirm(true);
+  };
+
+  const confirmClearNodes = () => {
     clearAllNodes();
+    setShowResetConfirm(false);
   };
 
   if (!currentWorkflow) return null;
@@ -262,6 +275,33 @@ export const WorkflowToolbar: React.FC = () => {
           workflowId={currentWorkflow?.id}
         />
       )}
+
+      {/* Confirm Reset (Clear All Nodes) Dialog */}
+      <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset workflow?</DialogTitle>
+          </DialogHeader>
+          <div className="text-sm text-gray-600">
+            This will remove all nodes and connections from the current
+            workflow. This action cannot be undone.
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="secondary"
+              onClick={() => setShowResetConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              onClick={confirmClearNodes}
+            >
+              Yes, clear all
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
