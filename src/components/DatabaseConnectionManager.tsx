@@ -10,6 +10,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import {
   databaseConnectionManager,
   DatabaseConnection,
@@ -67,6 +68,8 @@ export const DatabaseConnectionManager: React.FC<
   };
 
   const handleAddConnection = async () => {
+    const toastId = toast.loading("Adding database connection...");
+
     try {
       const connectionData = {
         ...formData,
@@ -77,13 +80,25 @@ export const DatabaseConnectionManager: React.FC<
       loadConnections();
       setShowAddDialog(false);
       resetForm();
+
+      toast.success(`Connection "${formData.name}" added successfully!`, {
+        id: toastId,
+      });
     } catch (error) {
       console.error("Error adding connection:", error);
+      toast.error(
+        `Failed to add connection: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        { id: toastId }
+      );
     }
   };
 
   const handleEditConnection = async () => {
     if (!editingConnection) return;
+
+    const toastId = toast.loading("Updating database connection...");
 
     try {
       await databaseConnectionManager.updateConnection(
@@ -93,37 +108,92 @@ export const DatabaseConnectionManager: React.FC<
       loadConnections();
       setEditingConnection(null);
       resetForm();
+
+      toast.success(`Connection "${formData.name}" updated successfully!`, {
+        id: toastId,
+      });
     } catch (error) {
       console.error("Error updating connection:", error);
+      toast.error(
+        `Failed to update connection: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        { id: toastId }
+      );
     }
   };
 
   const handleDeleteConnection = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this connection?")) {
+    const connection = connections.find((c) => c.id === id);
+    const connectionName = connection?.name || "connection";
+
+    if (
+      window.confirm(`Are you sure you want to delete "${connectionName}"?`)
+    ) {
+      const toastId = toast.loading("Deleting connection...");
+
       try {
         await databaseConnectionManager.deleteConnection(id);
         loadConnections();
+
+        toast.success(`Connection "${connectionName}" deleted successfully!`, {
+          id: toastId,
+        });
       } catch (error) {
         console.error("Error deleting connection:", error);
+        toast.error(
+          `Failed to delete connection: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          { id: toastId }
+        );
       }
     }
   };
 
   const handleTestConnection = async (id: string) => {
+    const connection = connections.find((c) => c.id === id);
+    const connectionName = connection?.name || "connection";
+
     setTestingConnection(id);
+    const toastId = toast.loading(
+      `Testing connection to "${connectionName}"...`
+    );
+
     try {
       const result = await databaseConnectionManager.testConnection(id);
       loadConnections();
 
       if (result.success) {
-        // Show success message
-        console.log("Connection test successful");
+        toast.success(
+          `✓ Successfully connected to "${connectionName}"!\n${
+            result.details ? `Response time: ${result.executionTime}ms` : ""
+          }`,
+          {
+            id: toastId,
+            duration: 4000,
+          }
+        );
       } else {
-        // Show error message
-        console.error("Connection test failed:", result.message);
+        toast.error(
+          `✗ Connection test failed for "${connectionName}":\n${result.message}`,
+          {
+            id: toastId,
+            duration: 6000,
+          }
+        );
       }
     } catch (error) {
       console.error("Error testing connection:", error);
+      toast.error(
+        `✗ Connection test error: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        {
+          id: toastId,
+          duration: 6000,
+        }
+      );
     } finally {
       setTestingConnection(null);
     }
