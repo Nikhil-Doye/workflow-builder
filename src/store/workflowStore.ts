@@ -26,7 +26,7 @@ const WORKFLOWS_STORAGE_KEY = "agent-workflow-builder-workflows";
 const generateNodeId = (): string => uuidv4();
 const generateEdgeId = (): string => uuidv4();
 
-// Create a mapping from deterministic IDs to UUIDs
+// Create a mapping from deterministic IDs to UUIDs (used for new generation flows)
 const createIdMapping = (nodeCount: number): Map<string, string> => {
   const mapping = new Map<string, string>();
   for (let i = 0; i < nodeCount; i++) {
@@ -35,23 +35,79 @@ const createIdMapping = (nodeCount: number): Map<string, string> => {
   return mapping;
 };
 
-// Migrate deterministic IDs to UUIDs in a workflow
-const migrateWorkflowIds = (workflow: Workflow): Workflow => {
-  // Check if workflow needs migration (contains deterministic IDs)
-  const hasDeterministicIds = workflow.nodes.some(
-    (node) => node.id.startsWith("node-") && /^node-\d+$/.test(node.id)
-  );
+// Determine if an ID looks like a deterministic placeholder (e.g., node-0, node-1)
+const isDeterministicId = (id: string): boolean => /^node-\d+$/.test(id);
 
-  if (!hasDeterministicIds) {
-    return workflow; // Already migrated
+// Build a stable ID mapping based on original node IDs (not array indices)
+const buildStableIdMapping = (workflow: Workflow): Map<string, string> => {
+  const mapping = new Map<string, string>();
+  const seenIds = new Set<string>();
+
+  // Map deterministic IDs to new UUIDs; detect duplicates and map them as well
+  for (const node of workflow.nodes) {
+    const id = node.id;
+    if (isDeterministicId(id) || seenIds.has(id)) {
+      mapping.set(id, generateNodeId());
+    }
+    seenIds.add(id);
+  }
+  return mapping;
+};
+
+// Validate edges against node ID set and return orphan edges
+const findOrphanEdges = (
+  edges: WorkflowEdge[],
+  validNodeIds: Set<string>
+): WorkflowEdge[] => {
+  return edges.filter(
+    (e) => !validNodeIds.has(e.source) || !validNodeIds.has(e.target)
+  );
+};
+
+// Migrate workflow node IDs using a stable mapping based on original IDs.
+// Also validates for collisions and orphan edges, reporting inconsistencies.
+const migrateWorkflowIds = (workflow: Workflow): Workflow => {
+  // Detect if any node uses deterministic ID or duplicate IDs exist
+  const hasDeterministic = workflow.nodes.some((n) => isDeterministicId(n.id));
+  const idCounts = workflow.nodes.reduce<Record<string, number>>((acc, n) => {
+    acc[n.id] = (acc[n.id] || 0) + 1;
+    return acc;
+  }, {});
+  const hasDuplicates = Object.values(idCounts).some((c) => c > 1);
+
+  if (!hasDeterministic && !hasDuplicates) {
+    // No migration needed; still validate orphans just in case
+    const nodeIdSet = new Set(workflow.nodes.map((n) => n.id));
+    const orphans = findOrphanEdges(workflow.edges, nodeIdSet);
+    if (orphans.length > 0) {
+      console.warn(
+        `Workflow "${workflow.name}" contains ${orphans.length} orphan edges referencing missing nodes. These edges will be removed during load.`,
+        orphans.map((e) => e.id)
+      );
+      const filteredEdges = workflow.edges.filter(
+        (e) => !orphans.some((o) => o.id === e.id)
+      );
+
+      return {
+        ...workflow,
+        edges: filteredEdges,
+        updatedAt: new Date(),
+      } as Workflow;
+    }
+    return workflow;
   }
 
-  // Create ID mapping
-  const idMapping = createIdMapping(workflow.nodes.length);
+  const idMapping = buildStableIdMapping(workflow);
 
-  // Migrate nodes
+  // Migrate nodes using mapping, ensuring uniqueness
+  const newIdSet = new Set<string>();
   const migratedNodes = workflow.nodes.map((node) => {
-    const newId = idMapping.get(node.id) || generateNodeId();
+    let newId = idMapping.get(node.id) || node.id;
+    // Guard against unexpected collisions after mapping
+    while (newIdSet.has(newId)) {
+      newId = generateNodeId();
+    }
+    newIdSet.add(newId);
     return {
       ...node,
       id: newId,
@@ -62,24 +118,54 @@ const migrateWorkflowIds = (workflow: Workflow): Workflow => {
     };
   });
 
-  // Migrate edges
+  const migratedIdSet = new Set(migratedNodes.map((n) => n.id));
+
+  // Migrate edges and track orphans
   const migratedEdges = workflow.edges.map((edge) => {
-    const newSourceId = idMapping.get(edge.source) || edge.source;
-    const newTargetId = idMapping.get(edge.target) || edge.target;
+    const mappedSource = idMapping.get(edge.source) || edge.source;
+    const mappedTarget = idMapping.get(edge.target) || edge.target;
     return {
       ...edge,
       id: generateEdgeId(),
-      source: newSourceId,
-      target: newTargetId,
+      source: mappedSource,
+      target: mappedTarget,
     };
   });
+
+  const orphanAfterMigration = findOrphanEdges(migratedEdges, migratedIdSet);
+  const filteredEdges = migratedEdges.filter(
+    (e) => !orphanAfterMigration.some((o) => o.id === e.id)
+  );
+
+  if (hasDeterministic || hasDuplicates) {
+    const duplicateIds = Object.entries(idCounts)
+      .filter(([, c]) => c > 1)
+      .map(([k]) => k);
+    if (duplicateIds.length > 0) {
+      console.warn(
+        `Workflow "${workflow.name}" had duplicate node IDs (${duplicateIds.length}):`,
+        duplicateIds
+      );
+    }
+  }
+
+  if (orphanAfterMigration.length > 0) {
+    console.warn(
+      `Removed ${orphanAfterMigration.length} orphan edges during migration for workflow "${workflow.name}".`,
+      orphanAfterMigration.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+      }))
+    );
+  }
 
   return {
     ...workflow,
     nodes: migratedNodes,
-    edges: migratedEdges,
+    edges: filteredEdges,
     updatedAt: new Date(),
-  };
+  } as Workflow;
 };
 
 // Helper functions for localStorage operations
