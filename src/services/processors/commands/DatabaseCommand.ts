@@ -45,7 +45,7 @@ export abstract class BaseDatabaseCommand implements DatabaseCommand {
   abstract getDescription(): string;
 
   validate(): boolean {
-    return this.config && typeof this.config === "object";
+    return this.config != null && typeof this.config === "object";
   }
 
   /**
@@ -62,6 +62,38 @@ export abstract class BaseDatabaseCommand implements DatabaseCommand {
       console.warn(`Failed to parse JSON parameter: ${param}`, error);
       return defaultValue;
     }
+  }
+
+  /**
+   * Runtime type guard utilities to enforce stronger config structures.
+   * These do not replace compile-time types but provide robust validation
+   * at runtime to prevent misconfiguration from propagating.
+   */
+  protected hasString(config: any, key: string): config is Record<string, any> {
+    return (
+      config && typeof config[key] === "string" && config[key].trim() !== ""
+    );
+  }
+
+  protected hasObject(config: any, key: string): boolean {
+    return (
+      config &&
+      typeof config[key] === "object" &&
+      config[key] !== null &&
+      !Array.isArray(config[key])
+    );
+  }
+
+  protected ensureKeys(
+    config: any,
+    keys: Array<{ key: string; type: "string" | "object" }>
+  ): { ok: boolean; missing: string[] } {
+    const missing: string[] = [];
+    for (const { key, type } of keys) {
+      if (type === "string" && !this.hasString(config, key)) missing.push(key);
+      if (type === "object" && !this.hasObject(config, key)) missing.push(key);
+    }
+    return { ok: missing.length === 0, missing };
   }
 
   /**

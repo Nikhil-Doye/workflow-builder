@@ -69,6 +69,16 @@ export class DeleteCommand
   }
 
   validate(): boolean {
-    return super.validate() && (!!this.config.filter || !!this.config.where);
+    if (!super.validate()) return false;
+    const hasFilter =
+      this.hasObject(this.config, "filter") ||
+      this.hasObject(this.config, "where");
+    if (!hasFilter) {
+      console.warn(
+        "DeleteCommand validation failed. 'filter' or 'where' object is required."
+      );
+      return false;
+    }
+    return true;
   }
 }

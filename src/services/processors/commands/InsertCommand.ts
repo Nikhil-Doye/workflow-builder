@@ -66,6 +66,25 @@ export class InsertCommand
   }
 
   validate(): boolean {
-    return super.validate() && (!!this.config.document || !!this.config.record);
+    if (!super.validate()) return false;
+    // Accept either 'document' (object/JSON) or 'record'
+    const hasDoc = this.hasObject(this.config, "document");
+    const hasRecord = this.hasObject(this.config, "record");
+    if (!hasDoc && !hasRecord) {
+      console.warn(
+        "InsertCommand validation failed. Expected 'document' or 'record' object."
+      );
+      return false;
+    }
+    // If SQL-like, ensure table/collection name is present
+    const requiresTable = !!(
+      (this.config as any).table || (this.config as any).collection
+    );
+    if (!requiresTable) {
+      console.warn(
+        "InsertCommand validation warning: missing 'table' or 'collection'. Some connectors require it."
+      );
+    }
+    return true;
   }
 }

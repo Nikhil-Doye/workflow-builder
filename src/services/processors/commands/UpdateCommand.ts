@@ -84,10 +84,19 @@ export class UpdateCommand
   }
 
   validate(): boolean {
-    return (
-      super.validate() &&
-      (!!this.config.filter || !!this.config.where) &&
-      (!!this.config.update || !!this.config.set)
-    );
+    if (!super.validate()) return false;
+    const hasFilter =
+      this.hasObject(this.config, "filter") ||
+      this.hasObject(this.config, "where");
+    const hasUpdate =
+      this.hasObject(this.config, "update") ||
+      this.hasObject(this.config, "set");
+    if (!hasFilter || !hasUpdate) {
+      console.warn(
+        "UpdateCommand validation failed. 'filter/where' and 'update/set' objects are required."
+      );
+      return false;
+    }
+    return true;
   }
 }

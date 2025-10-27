@@ -30,6 +30,15 @@ export class QueryCommand
   }
 
   validate(): boolean {
-    return super.validate() && !!this.config.query;
+    if (!super.validate()) return false;
+    const { ok, missing } = this.ensureKeys(this.config, [
+      { key: "query", type: "string" },
+    ]);
+    if (!ok) {
+      console.warn(
+        `QueryCommand validation failed. Missing fields: ${missing.join(", ")}`
+      );
+    }
+    return ok;
   }
 }
