@@ -1,4 +1,10 @@
 import Firecrawl from "@mendable/firecrawl-js";
+import {
+  safeAPICall,
+  validateJSONResponse,
+  formatAPIErrorForUI,
+  getAPIErrorDetails,
+} from "./apiErrorHandler";
 
 // Get API key from environment or localStorage
 const getFirecrawlApiKey = (): string => {
@@ -7,6 +13,13 @@ const getFirecrawlApiKey = (): string => {
     process.env.REACT_APP_FIRECRAWL_API_KEY ||
     ""
   );
+};
+
+// Optional proxy base URL (recommended for production)
+const getProxyBaseUrl = (): string | null => {
+  const fromStorage = localStorage.getItem("api_base_url");
+  const fromEnv = process.env.REACT_APP_API_BASE;
+  return fromStorage || fromEnv || null;
 };
 
 export interface FirecrawlConfig {
@@ -73,20 +86,7 @@ export const scrapeWithFirecrawl = async (
   config: FirecrawlConfig
 ): Promise<FirecrawlResponse> => {
   try {
-    // Check if API key is configured
-    const apiKey = getFirecrawlApiKey();
-    if (!apiKey || apiKey === "your_firecrawl_api_key_here") {
-      throw new Error(
-        "Firecrawl API key not configured. Please configure your API key in the settings."
-      );
-    }
-
-    // Initialize Firecrawl client with the current API key
-    const firecrawl = new Firecrawl({
-      apiKey: apiKey,
-      // Add base URL if needed
-      // baseURL: 'https://api.firecrawl.dev/v0'
-    });
+    const proxyBase = getProxyBaseUrl();
 
     // Validate URL
     const url = (config.url || "").trim();
@@ -96,8 +96,85 @@ export const scrapeWithFirecrawl = async (
       );
     }
 
-    // Prepare a minimal, whitelisted options object per Firecrawl v2
-    // Some undocumented keys can cause 400 errors; keep this strict.
+    // Prefer secure proxy in production
+    if (proxyBase) {
+      const endpoint = `${proxyBase.replace(/\/$/, "")}/firecrawl/scrape`;
+      const payload = {
+        url,
+        formats:
+          config.formats && config.formats.length > 0
+            ? config.formats
+            : ["markdown"],
+        onlyMainContent: config.onlyMainContent !== false,
+        timeout: config.timeout,
+        location: config.location,
+      };
+
+      const resp = await safeAPICall(
+        () =>
+          fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }),
+        {
+          timeout: config.timeout || 30000,
+          retries: 1,
+          retryDelay: 1500,
+          validateResponse: () => ({ isValid: true, errors: [], warnings: [] }),
+          operationName: "Firecrawl proxy scrape",
+          context: { url },
+        }
+      );
+
+      if (!resp.ok) {
+        let body: any = "";
+        try {
+          body = await resp.text();
+        } catch {}
+        const err = new Error(
+          `Firecrawl proxy error: ${resp.status} ${resp.statusText}`
+        ) as any;
+        (err as any).statusCode = resp.status;
+        (err as any).responseText = body;
+        throw err;
+      }
+
+      let data: any;
+      try {
+        data = await resp.json();
+      } catch {
+        throw new Error(
+          "Invalid JSON response from Firecrawl proxy. The service may be misconfigured."
+        );
+      }
+
+      return { success: true, data };
+    }
+
+    // Fallback (dev only): direct browser call with SDK
+    if (process.env.NODE_ENV === "production") {
+      const error = new Error(
+        "Firecrawl proxy not configured. In production, configure REACT_APP_API_BASE or localStorage 'api_base_url' to a secure backend."
+      ) as any;
+      (error as any).isConfigurationError = true;
+      throw error;
+    }
+
+    // Check if API key is configured (dev only)
+    const apiKey = getFirecrawlApiKey();
+    if (!apiKey || apiKey === "your_firecrawl_api_key_here") {
+      const error = new Error(
+        "Firecrawl API key not configured. Open Settings and add your Firecrawl API key."
+      ) as any;
+      (error as any).isConfigurationError = true;
+      throw error;
+    }
+
+    // Initialize Firecrawl client with the current API key (dev only)
+    const firecrawl = new Firecrawl({ apiKey });
+
+    // Prepare minimal, whitelisted options
     const scrapeOptions: any = {
       formats:
         config.formats && config.formats.length > 0
@@ -108,92 +185,49 @@ export const scrapeWithFirecrawl = async (
       ...(config.location ? { location: config.location } : {}),
     };
 
-    // Perform the scrape - SDK returns data directly
-    console.log("Firecrawl API Call - URL:", config.url);
-    console.log("Firecrawl API Call - Options:", scrapeOptions);
-
-    try {
-      // First attempt with provided options
-      const data = await firecrawl.scrape(url, scrapeOptions);
-      console.log("Firecrawl API Response:", data);
-
-      if (!data) {
-        throw new Error("No data returned from Firecrawl API");
-      }
-
-      return {
-        success: true,
-        data: {
-          markdown: data.markdown,
-          html: data.html,
-          rawHtml: data.rawHtml,
-          summary: data.summary,
-          links: data.links,
-          images: data.images,
-          screenshot: data.screenshot,
-          json: data.json,
-          //  metadata: data.metadata,
-          actions: data.actions,
-        },
-      };
-    } catch (apiError) {
-      // Extract as much detail as possible from the error
-      const anyErr: any = apiError as any;
-      const status = anyErr?.status || anyErr?.response?.status;
-      const body = anyErr?.response?.data || anyErr?.data || anyErr?.message;
-      console.error("Firecrawl API Call Error:", {
-        status,
-        body,
-      });
-
-      // If it's a 400 Bad Request, retry once with ultra-minimal options
-      if (status === 400) {
-        const minimalOptions = {
-          formats: ["markdown"],
-          onlyMainContent: true,
-        } as const;
-        console.warn(
-          "Retrying Firecrawl.scrape with minimal options:",
-          minimalOptions
-        );
-        const retryData = await firecrawl.scrape(url, minimalOptions as any);
-        if (!retryData) {
-          throw new Error("No data returned from Firecrawl API (after retry)");
-        }
-        return {
-          success: true,
-          data: {
-            markdown: retryData.markdown,
-            html: retryData.html,
-            rawHtml: retryData.rawHtml,
-            summary: retryData.summary,
-            links: retryData.links,
-            images: retryData.images,
-            screenshot: retryData.screenshot,
-            json: retryData.json,
-            actions: retryData.actions,
-          },
-        };
-      }
-
-      throw new Error(
-        `Firecrawl request failed${status ? ` (status ${status})` : ""}: ${
-          typeof body === "string" ? body : JSON.stringify(body)
-        }`
-      );
+    // Perform the scrape with SDK
+    const data = await firecrawl.scrape(url, scrapeOptions);
+    if (!data) {
+      throw new Error("No data returned from Firecrawl API");
     }
-  } catch (error) {
-    console.error("Firecrawl API Error:", error);
-    console.error("Error details:", {
-      message: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined,
-    });
 
-    // Return a fallback response if API fails
+    return {
+      success: true,
+      data: {
+        markdown: data.markdown,
+        html: data.html,
+        rawHtml: data.rawHtml,
+        summary: data.summary,
+        links: data.links,
+        images: data.images,
+        screenshot: data.screenshot,
+        json: data.json,
+        actions: data.actions,
+      },
+    };
+  } catch (error) {
+    // Enhanced error handling with user-friendly messaging
+    const apiError = getAPIErrorDetails(error);
+    if (apiError) {
+      const ui = formatAPIErrorForUI(error);
+      return {
+        success: false,
+        error: `${ui.message} ${
+          ui.action
+            ? `Suggested action: ${ui.action}. Go to Settings → API Keys to configure.`
+            : ""
+        }`.trim(),
+      };
+    }
+
+    const message = error instanceof Error ? error.message : "Unknown error";
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred",
+      error: `${message} ${
+        message.includes("API key") || message.includes("proxy")
+          ? "Go to Settings → API Keys to configure your Firecrawl key or set a proxy."
+          : ""
+      }`.trim(),
     };
   }
 };
@@ -209,17 +243,74 @@ export const batchScrapeWithFirecrawl = async (
   config?: Omit<FirecrawlConfig, "url">
 ): Promise<any> => {
   try {
-    const apiKey = getFirecrawlApiKey();
-    if (!apiKey || apiKey === "your_firecrawl_api_key_here") {
-      throw new Error(
-        "Firecrawl API key not configured. Please configure your API key in the settings."
+    const proxyBase = getProxyBaseUrl();
+
+    if (proxyBase) {
+      const endpoint = `${proxyBase.replace(/\/$/, "")}/firecrawl/batch`;
+      const payload = {
+        urls,
+        options: {
+          formats: config?.formats || ["markdown", "html"],
+          ...(config?.onlyMainContent !== undefined && {
+            onlyMainContent: config.onlyMainContent,
+          }),
+          ...(config?.timeout && { timeout: config.timeout }),
+          ...(config?.maxAge !== undefined && { maxAge: config.maxAge }),
+        },
+      };
+
+      const resp = await safeAPICall(
+        () =>
+          fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }),
+        {
+          timeout: (config?.timeout as number) || 30000,
+          retries: 1,
+          retryDelay: 1500,
+          validateResponse: () => ({ isValid: true, errors: [], warnings: [] }),
+          operationName: "Firecrawl proxy batch scrape",
+          context: { urlCount: urls.length },
+        }
       );
+
+      if (!resp.ok) {
+        let body: any = "";
+        try {
+          body = await resp.text();
+        } catch {}
+        const err = new Error(
+          `Firecrawl proxy error: ${resp.status} ${resp.statusText}`
+        ) as any;
+        (err as any).statusCode = resp.status;
+        (err as any).responseText = body;
+        throw err;
+      }
+
+      return await resp.json();
     }
 
-    const firecrawl = new Firecrawl({
-      apiKey: apiKey,
-    });
+    // Dev fallback with SDK
+    if (process.env.NODE_ENV === "production") {
+      const error = new Error(
+        "Firecrawl proxy not configured. In production, configure REACT_APP_API_BASE or localStorage 'api_base_url' to a secure backend."
+      ) as any;
+      (error as any).isConfigurationError = true;
+      throw error;
+    }
 
+    const apiKey = getFirecrawlApiKey();
+    if (!apiKey || apiKey === "your_firecrawl_api_key_here") {
+      const error = new Error(
+        "Firecrawl API key not configured. Open Settings and add your Firecrawl API key."
+      ) as any;
+      (error as any).isConfigurationError = true;
+      throw error;
+    }
+
+    const firecrawl = new Firecrawl({ apiKey });
     const options = {
       formats: config?.formats || ["markdown", "html"],
       ...(config?.onlyMainContent !== undefined && {
@@ -228,13 +319,19 @@ export const batchScrapeWithFirecrawl = async (
       ...(config?.timeout && { timeout: config.timeout }),
       ...(config?.maxAge !== undefined && { maxAge: config.maxAge }),
     };
-
-    // Use the batch_scrape method (synchronous version)
-    const result = await firecrawl.batchScrape(urls, options);
-
-    return result;
+    return await firecrawl.batchScrape(urls, options);
   } catch (error) {
-    console.error("Batch scrape error:", error);
-    throw error;
+    const apiError = getAPIErrorDetails(error);
+    if (apiError) {
+      const ui = formatAPIErrorForUI(error);
+      throw new Error(
+        `${ui.message} ${
+          ui.action
+            ? `Suggested action: ${ui.action}. Go to Settings → API Keys to configure.`
+            : ""
+        }`.trim()
+      );
+    }
+    throw error instanceof Error ? error : new Error("Unknown Firecrawl error");
   }
 };
