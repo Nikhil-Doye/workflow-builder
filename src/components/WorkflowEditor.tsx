@@ -1,4 +1,10 @@
-import React, { useCallback, useRef, useState, useMemo } from "react";
+import React, {
+  useCallback,
+  useRef,
+  useState,
+  useMemo,
+  useEffect,
+} from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -22,6 +28,7 @@ import { NodeLibrary } from "./NodeLibrary";
 import { ConnectionSuggestions } from "./ConnectionSuggestions";
 import { ConnectionValidation } from "./ConnectionValidation";
 import { InteractiveTutorial } from "./InteractiveTutorial";
+import { ExecutionLogger } from "./ExecutionLogger";
 import {
   WebScrapingNode,
   LLMNode,
@@ -40,7 +47,19 @@ import {
   GmailNode,
 } from "./nodes";
 import { NodeData } from "../types";
-import { Grid, Trash2, Sparkles, X, Lightbulb, Play } from "lucide-react";
+import {
+  Grid,
+  Trash2,
+  Sparkles,
+  X,
+  Lightbulb,
+  Play,
+  Activity,
+} from "lucide-react";
+import {
+  executionEventBus,
+  ExecutionEvent,
+} from "../services/executionEventBus";
 
 const nodeTypes: NodeTypes = {
   webScraping: WebScrapingNode,
@@ -76,7 +95,10 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
     panelStates,
     togglePanel,
     updateNodePosition,
+    isExecuting,
+    currentExecution,
   } = useWorkflowStore();
+
   const nodes = useMemo(
     () => currentWorkflow?.nodes || [],
     [currentWorkflow?.nodes]
@@ -86,13 +108,61 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
   const [showCopilot, setShowCopilot] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showExecutionLogger, setShowExecutionLogger] = useState(false);
   const [connectionSource, setConnectionSource] =
     useState<Node<NodeData> | null>(null);
   const [connectionTarget, setConnectionTarget] =
     useState<Node<NodeData> | null>(null);
+  const [activeExecutionId, setActiveExecutionId] = useState<string | null>(
+    null
+  );
+  const [executionMetrics, setExecutionMetrics] = useState<{
+    completedNodes: number;
+    failedNodes: number;
+    totalDuration: number;
+  }>({ completedNodes: 0, failedNodes: 0, totalDuration: 0 });
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
+  const executionUnsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Subscribe to execution events for real-time feedback
+  useEffect(() => {
+    if (isExecuting && currentExecution?.id) {
+      setActiveExecutionId(currentExecution.id);
+      setShowExecutionLogger(true);
+
+      // Subscribe to execution events
+      executionUnsubscribeRef.current = executionEventBus.subscribeToExecution(
+        currentExecution.id,
+        (event: ExecutionEvent) => {
+          // Update execution metrics
+          if (event.type === "execution:complete") {
+            setExecutionMetrics({
+              completedNodes: event.completedNodes,
+              failedNodes: event.failedNodes,
+              totalDuration: event.totalDuration,
+            });
+          } else if (event.type === "node:complete") {
+            setExecutionMetrics((prev) => ({
+              ...prev,
+              completedNodes:
+                prev.completedNodes + (event.status === "success" ? 1 : 0),
+              failedNodes:
+                prev.failedNodes + (event.status === "failed" ? 1 : 0),
+            }));
+          }
+        }
+      );
+    }
+
+    return () => {
+      if (executionUnsubscribeRef.current) {
+        executionUnsubscribeRef.current();
+        executionUnsubscribeRef.current = null;
+      }
+    };
+  }, [isExecuting, currentExecution?.id]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -314,6 +384,25 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
                 <span className="font-medium">Tutorial</span>
               </button>
 
+              {/* Execution Logger Toggle */}
+              <button
+                onClick={() => setShowExecutionLogger(!showExecutionLogger)}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  showExecutionLogger || isExecuting
+                    ? "bg-blue-100 text-blue-700 border border-blue-200"
+                    : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                }`}
+                title="Toggle execution logger"
+              >
+                <Activity className="w-4 h-4" />
+                <span className="font-medium">
+                  {isExecuting ? "Executing..." : "Logs"}
+                </span>
+                {isExecuting && (
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                )}
+              </button>
+
               {selectedNodeId && (
                 <button
                   onClick={handleDeleteSelected}
@@ -327,6 +416,21 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
             </div>
 
             <div className="flex items-center space-x-3">
+              {/* Execution Metrics */}
+              {isExecuting && (
+                <div className="flex items-center space-x-2 px-3 py-1 bg-blue-50 rounded-lg border border-blue-200">
+                  <Activity className="w-4 h-4 text-blue-600 animate-spin" />
+                  <span className="text-sm font-medium text-blue-700">
+                    {executionMetrics.completedNodes}/{nodes.length} completed
+                  </span>
+                  {executionMetrics.failedNodes > 0 && (
+                    <span className="text-sm font-medium text-red-700">
+                      ({executionMetrics.failedNodes} failed)
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center space-x-2 text-sm text-gray-500">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <span>{nodes.length} nodes</span>
@@ -370,7 +474,9 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
                 maxZoom: 2,
               }}
               attributionPosition="bottom-left"
-              className="bg-gradient-to-br from-gray-50 to-blue-50/30"
+              className={`bg-gradient-to-br from-gray-50 to-blue-50/30 ${
+                isExecuting ? "opacity-75" : ""
+              }`}
               minZoom={0.1}
               maxZoom={2}
             >
@@ -473,6 +579,13 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({ onClose }) => {
         onComplete={() => setShowTutorial(false)}
         workflowNodes={nodes}
         workflowEdges={edges}
+      />
+
+      {/* Execution Logger */}
+      <ExecutionLogger
+        executionId={activeExecutionId || undefined}
+        isOpen={showExecutionLogger}
+        onClose={() => setShowExecutionLogger(false)}
       />
     </div>
   );

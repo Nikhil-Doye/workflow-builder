@@ -1,5 +1,14 @@
 // Import variable substitution utilities
 import { substituteVariables, NodeOutput } from "../utils/variableSubstitution";
+import {
+  executionEventBus,
+  ExecutionStartEvent,
+  NodeStartEvent,
+  NodeProgressEvent,
+  NodeCompleteEvent,
+  ExecutionCompleteEvent,
+  ExecutionErrorEvent,
+} from "./executionEventBus";
 
 export interface ExecutionContext {
   nodeId: string;
@@ -88,6 +97,20 @@ export class ExecutionEngine {
       options,
     });
 
+    // Emit execution start event
+    const executionStartEvent: ExecutionStartEvent = {
+      type: "execution:start",
+      executionId,
+      workflowId,
+      timestamp: new Date(),
+      nodeCount: nodes.length,
+      executionMode: (options.mode || "sequential") as
+        | "sequential"
+        | "parallel"
+        | "conditional",
+    };
+    executionEventBus.emit(executionStartEvent);
+
     // Validate workflow before execution
     try {
       this.validateWorkflowStructure(nodes, edges);
@@ -95,6 +118,16 @@ export class ExecutionEngine {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown validation error";
       console.error("Workflow validation failed:", errorMessage);
+
+      // Emit validation error event
+      const validationErrorEvent: ExecutionErrorEvent = {
+        type: "execution:error",
+        executionId,
+        stage: "validation",
+        error: errorMessage,
+        timestamp: new Date(),
+      };
+      executionEventBus.emit(validationErrorEvent);
 
       // Create a failed execution plan
       const failedPlan: ExecutionPlan = {
@@ -131,14 +164,55 @@ export class ExecutionEngine {
     this.activeExecutions.set(executionId, plan);
 
     try {
-      await this.executePlan(plan, onNodeUpdate);
+      await this.executePlan(plan, onNodeUpdate, executionId);
       plan.status = "completed";
+
+      // Emit execution complete event
+      const executionCompleteEvent: ExecutionCompleteEvent = {
+        type: "execution:complete",
+        executionId,
+        workflowId,
+        status: "success",
+        totalDuration: plan.totalDuration || 0,
+        completedNodes: plan.nodes.filter((n) => n.status === "completed")
+          .length,
+        failedNodes: plan.nodes.filter((n) => n.status === "failed").length,
+        results: plan.results,
+        errors: plan.errors,
+        timestamp: new Date(),
+      };
+      executionEventBus.emit(executionCompleteEvent);
     } catch (error) {
       plan.status = "failed";
-      plan.errors.set(
-        "root",
-        error instanceof Error ? error.message : "Unknown error"
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      plan.errors.set("root", errorMessage);
+
+      // Emit execution error event
+      const executionErrorEvent: ExecutionErrorEvent = {
+        type: "execution:error",
+        executionId,
+        stage: "execution",
+        error: errorMessage,
+        timestamp: new Date(),
+      };
+      executionEventBus.emit(executionErrorEvent);
+
+      // Emit execution complete event with failure status
+      const executionCompleteEvent: ExecutionCompleteEvent = {
+        type: "execution:complete",
+        executionId,
+        workflowId,
+        status: "failed",
+        totalDuration: plan.totalDuration || 0,
+        completedNodes: plan.nodes.filter((n) => n.status === "completed")
+          .length,
+        failedNodes: plan.nodes.filter((n) => n.status === "failed").length,
+        results: plan.results,
+        errors: plan.errors,
+        timestamp: new Date(),
+      };
+      executionEventBus.emit(executionCompleteEvent);
     } finally {
       plan.endTime = new Date();
       plan.totalDuration =
@@ -367,20 +441,21 @@ export class ExecutionEngine {
       status: string,
       data?: any,
       error?: string
-    ) => void
+    ) => void,
+    executionId: string
   ): Promise<void> {
     plan.status = "running";
     plan.startTime = new Date();
 
     switch (plan.executionMode) {
       case "sequential":
-        await this.executeSequential(plan, onNodeUpdate);
+        await this.executeSequential(plan, onNodeUpdate, executionId);
         break;
       case "parallel":
-        await this.executeParallel(plan, onNodeUpdate);
+        await this.executeParallel(plan, onNodeUpdate, executionId);
         break;
       case "conditional":
-        await this.executeConditional(plan, onNodeUpdate);
+        await this.executeConditional(plan, onNodeUpdate, executionId);
         break;
       default:
         throw new Error(`Unsupported execution mode: ${plan.executionMode}`);
@@ -395,7 +470,8 @@ export class ExecutionEngine {
       status: string,
       data?: any,
       error?: string
-    ) => void
+    ) => void,
+    executionId: string
   ): Promise<void> {
     const executionOrder = this.getExecutionOrder(plan.nodes, plan.edges);
 
@@ -418,7 +494,7 @@ export class ExecutionEngine {
       if (!context) continue;
 
       try {
-        await this.executeNode(context, plan, onNodeUpdate);
+        await this.executeNode(context, plan, onNodeUpdate, executionId);
       } catch (error) {
         context.status = "failed";
         context.error =
@@ -446,7 +522,8 @@ export class ExecutionEngine {
       status: string,
       data?: any,
       error?: string
-    ) => void
+    ) => void,
+    executionId: string
   ): Promise<void> {
     const parallelGroups = this.createParallelGroups(
       plan.nodes,
@@ -456,7 +533,7 @@ export class ExecutionEngine {
 
     // Execute groups in parallel
     const groupPromises = parallelGroups.map((group) =>
-      this.executeParallelGroup(group, plan, onNodeUpdate)
+      this.executeParallelGroup(group, plan, onNodeUpdate, executionId)
     );
 
     await Promise.allSettled(groupPromises);
@@ -471,13 +548,14 @@ export class ExecutionEngine {
       status: string,
       data?: any,
       error?: string
-    ) => void
+    ) => void,
+    executionId: string
   ): Promise<void> {
     const nodePromises = group.nodes.map((nodeId) => {
       const context = plan.nodes.find((n) => n.nodeId === nodeId);
       if (!context) return Promise.resolve();
 
-      return this.executeNode(context, plan, onNodeUpdate);
+      return this.executeNode(context, plan, onNodeUpdate, executionId);
     });
 
     if (group.waitForAll) {
@@ -495,7 +573,8 @@ export class ExecutionEngine {
       status: string,
       data?: any,
       error?: string
-    ) => void
+    ) => void,
+    executionId: string
   ): Promise<void> {
     const executionOrder = this.getExecutionOrder(plan.nodes, plan.edges);
     const visited = new Set<string>();
@@ -507,7 +586,7 @@ export class ExecutionEngine {
       if (!context) continue;
 
       try {
-        await this.executeNode(context, plan, onNodeUpdate);
+        await this.executeNode(context, plan, onNodeUpdate, executionId);
         visited.add(nodeId);
 
         // Check for conditional branches
@@ -517,7 +596,8 @@ export class ExecutionEngine {
             branches,
             plan,
             visited,
-            onNodeUpdate
+            onNodeUpdate,
+            executionId
           );
         }
       } catch (error) {
@@ -568,7 +648,8 @@ export class ExecutionEngine {
       status: string,
       data?: any,
       error?: string
-    ) => void
+    ) => void,
+    executionId: string
   ): Promise<void> {
     for (const branch of branches) {
       const shouldExecuteTrue = await this.evaluateCondition(
@@ -587,7 +668,7 @@ export class ExecutionEngine {
         if (!context) continue;
 
         try {
-          await this.executeNode(context, plan, onNodeUpdate);
+          await this.executeNode(context, plan, onNodeUpdate, executionId);
           visited.add(nodeId);
         } catch (error) {
           context.status = "failed";
@@ -729,10 +810,21 @@ export class ExecutionEngine {
       status: string,
       data?: any,
       error?: string
-    ) => void
+    ) => void,
+    executionId: string
   ): Promise<void> {
     context.status = "running";
     context.startTime = new Date();
+
+    // Emit node start event
+    const nodeStartEvent: NodeStartEvent = {
+      type: "node:start",
+      executionId,
+      nodeId: context.nodeId,
+      nodeType: context.nodeType,
+      timestamp: new Date(),
+    };
+    executionEventBus.emit(nodeStartEvent);
 
     // Notify that node is starting
     if (onNodeUpdate) {
@@ -782,6 +874,18 @@ export class ExecutionEngine {
       // Store in plan results
       plan.results.set(context.nodeId, result);
 
+      // Emit node complete event
+      const nodeCompleteEvent: NodeCompleteEvent = {
+        type: "node:complete",
+        executionId,
+        nodeId: context.nodeId,
+        nodeType: context.nodeType,
+        result: result,
+        duration: context.duration || 0,
+        timestamp: new Date(),
+      };
+      executionEventBus.emit(nodeCompleteEvent);
+
       // Notify that node completed successfully
       if (onNodeUpdate) {
         onNodeUpdate(context.nodeId, "completed", result);
@@ -792,6 +896,17 @@ export class ExecutionEngine {
       context.endTime = new Date();
       context.duration =
         context.endTime.getTime() - context.startTime.getTime();
+
+      // Emit node error event
+      const nodeErrorEvent: ExecutionErrorEvent = {
+        type: "node:error",
+        executionId,
+        nodeId: context.nodeId,
+        nodeType: context.nodeType,
+        error: context.error || "Unknown error",
+        timestamp: new Date(),
+      };
+      executionEventBus.emit(nodeErrorEvent);
 
       // Notify about the error
       if (onNodeUpdate) {
@@ -809,7 +924,7 @@ export class ExecutionEngine {
         );
 
         // Retry execution
-        return this.executeNode(context, plan, onNodeUpdate);
+        return this.executeNode(context, plan, onNodeUpdate, executionId);
       }
 
       throw error;
