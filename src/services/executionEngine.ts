@@ -10,6 +10,10 @@ import {
   ExecutionErrorEvent,
 } from "./executionEventBus";
 import { workflowValidationEngine } from "./workflowValidationEngine";
+import {
+  mapWithConcurrencySettled,
+  ConcurrencyLimiter,
+} from "./concurrencyLimiter";
 
 export interface ExecutionContext {
   nodeId: string;
@@ -540,12 +544,21 @@ export class ExecutionEngine {
       "parallel"
     );
 
-    // Execute groups in parallel
-    const groupPromises = parallelGroups.map((group) =>
-      this.executeParallelGroup(group, plan, onNodeUpdate, executionId)
+    // Get the max concurrency from the plan or use default
+    const maxConcurrency =
+      (plan as any).maxConcurrency || this.maxConcurrentExecutions;
+
+    // Execute groups in parallel with concurrency limiting
+    const groupFunctions = parallelGroups.map(
+      (group) => () =>
+        this.executeParallelGroup(group, plan, onNodeUpdate, executionId)
     );
 
-    await Promise.allSettled(groupPromises);
+    await mapWithConcurrencySettled(
+      groupFunctions,
+      (fn) => fn(),
+      maxConcurrency
+    );
   }
 
   // Execute a parallel group
@@ -560,17 +573,42 @@ export class ExecutionEngine {
     ) => void,
     executionId: string
   ): Promise<void> {
-    const nodePromises = group.nodes.map((nodeId) => {
-      const context = plan.nodes.find((n) => n.nodeId === nodeId);
-      if (!context) return Promise.resolve();
+    const maxConcurrency =
+      group.maxConcurrency ||
+      (plan as any).maxConcurrency ||
+      this.maxConcurrentExecutions;
 
-      return this.executeNode(context, plan, onNodeUpdate, executionId);
+    const nodeExecutionFunctions = group.nodes.map((nodeId) => {
+      return async () => {
+        const context = plan.nodes.find((n) => n.nodeId === nodeId);
+        if (!context) return Promise.resolve();
+        return this.executeNode(context, plan, onNodeUpdate, executionId);
+      };
     });
 
     if (group.waitForAll) {
-      await Promise.allSettled(nodePromises);
+      // Execute all nodes with concurrency limiting
+      await mapWithConcurrencySettled(
+        nodeExecutionFunctions,
+        (fn) => fn(),
+        maxConcurrency
+      );
     } else {
-      await Promise.race(nodePromises);
+      // Execute with concurrency limiting and return first result
+      const promises = nodeExecutionFunctions.map((fn) =>
+        (async () => {
+          try {
+            return await fn();
+          } catch (error) {
+            return error;
+          }
+        })()
+      );
+
+      // Use Promise.race with limited concurrency
+      const limiter = new ConcurrencyLimiter(maxConcurrency);
+      const limitedPromises = promises.map((p) => limiter.run(() => p));
+      await Promise.race(limitedPromises);
     }
   }
 
