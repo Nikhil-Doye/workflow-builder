@@ -26,6 +26,104 @@ const WORKFLOWS_STORAGE_KEY = "agent-workflow-builder-workflows";
 const generateNodeId = (): string => uuidv4();
 const generateEdgeId = (): string => uuidv4();
 
+// Valid node types registry
+const VALID_NODE_TYPES = new Set<string>([
+  "webScraping",
+  "structuredOutput",
+  "embeddingGenerator",
+  "similaritySearch",
+  "llmTask",
+  "dataInput",
+  "dataOutput",
+  "database",
+  "slack",
+  "discord",
+  "gmail",
+]);
+
+// Validate node type
+const isValidNodeType = (type: string): boolean => {
+  return VALID_NODE_TYPES.has(type);
+};
+
+// Position collision detection
+const COLLISION_THRESHOLD = 80; // pixels - if nodes are within this distance, consider collision
+const POSITION_OFFSET = 30; // pixels - offset for collision resolution
+
+const hasPositionCollision = (
+  position: { x: number; y: number },
+  existingNodes: WorkflowNode[]
+): boolean => {
+  return existingNodes.some((node) => {
+    const dx = Math.abs(node.position.x - position.x);
+    const dy = Math.abs(node.position.y - position.y);
+    return dx < COLLISION_THRESHOLD && dy < COLLISION_THRESHOLD;
+  });
+};
+
+const resolvePositionCollision = (
+  position: { x: number; y: number },
+  existingNodes: WorkflowNode[]
+): { x: number; y: number } => {
+  let resolvedPosition = { ...position };
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  // Try to find a non-colliding position
+  while (
+    hasPositionCollision(resolvedPosition, existingNodes) &&
+    attempts < maxAttempts
+  ) {
+    // Try positions in a spiral pattern: right, down, left, up
+    const offset = POSITION_OFFSET * (attempts + 1);
+
+    switch (attempts % 4) {
+      case 0: // Right
+        resolvedPosition = { x: position.x + offset, y: position.y };
+        break;
+      case 1: // Down
+        resolvedPosition = { x: position.x, y: position.y + offset };
+        break;
+      case 2: // Left
+        resolvedPosition = { x: position.x - offset, y: position.y };
+        break;
+      case 3: // Up
+        resolvedPosition = { x: position.x, y: position.y - offset };
+        break;
+    }
+
+    attempts++;
+  }
+
+  // If still colliding after max attempts, use a random offset
+  if (hasPositionCollision(resolvedPosition, existingNodes)) {
+    resolvedPosition = {
+      x: position.x + Math.random() * 100 - 50,
+      y: position.y + Math.random() * 100 - 50,
+    };
+  }
+
+  return resolvedPosition;
+};
+
+// Get default label for node type
+const getDefaultNodeLabel = (type: string): string => {
+  const labels: Record<string, string> = {
+    webScraping: "Web Scraping",
+    structuredOutput: "Structured Output",
+    embeddingGenerator: "Embedding Generator",
+    similaritySearch: "Similarity Search",
+    llmTask: "LLM Task",
+    dataInput: "Data Input",
+    dataOutput: "Data Output",
+    database: "Database",
+    slack: "Slack",
+    discord: "Discord",
+    gmail: "Gmail",
+  };
+  return labels[type] || `${type} Node`;
+};
+
 // Create a mapping from deterministic IDs to UUIDs (used for new generation flows)
 const createIdMapping = (nodeCount: number): Map<string, string> => {
   const mapping = new Map<string, string>();
@@ -505,21 +603,46 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     const { currentWorkflow } = get();
     if (!currentWorkflow) return;
 
+    // Validate node type
+    if (!isValidNodeType(type)) {
+      console.error(
+        `[WorkflowStore] Invalid node type: "${type}". Valid types:`,
+        Array.from(VALID_NODE_TYPES).join(", ")
+      );
+      return;
+    }
+
+    // Resolve position collision
+    const resolvedPosition = resolvePositionCollision(
+      position,
+      currentWorkflow.nodes
+    );
+
     const nodeId = generateNodeId();
     const newNode: WorkflowNode = {
       id: nodeId,
       type,
-      position,
+      position: resolvedPosition,
       data: {
         id: nodeId,
         type: type as any,
-        label: `${type} Node`,
+        label: getDefaultNodeLabel(type),
         status: "idle",
         config: {},
         inputs: [],
         outputs: [],
       },
     };
+
+    // Log if position was adjusted
+    if (
+      resolvedPosition.x !== position.x ||
+      resolvedPosition.y !== position.y
+    ) {
+      console.log(
+        `[WorkflowStore] Position collision detected. Adjusted from (${position.x}, ${position.y}) to (${resolvedPosition.x}, ${resolvedPosition.y})`
+      );
+    }
 
     set((state) => ({
       currentWorkflow: state.currentWorkflow

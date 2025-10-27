@@ -26,6 +26,153 @@ describe("WorkflowStore", () => {
     });
   });
 
+  describe("Node Type Validation", () => {
+    it("should add node with valid type", () => {
+      const { result } = renderHook(() => useWorkflowStore());
+
+      act(() => {
+        result.current.createWorkflow("Test Workflow");
+        result.current.addNode("llmTask", { x: 100, y: 100 });
+      });
+
+      expect(result.current.currentWorkflow?.nodes).toHaveLength(1);
+      expect(result.current.currentWorkflow?.nodes[0].type).toBe("llmTask");
+      expect(result.current.currentWorkflow?.nodes[0].data.label).toBe(
+        "LLM Task"
+      );
+    });
+
+    it("should reject invalid node type", () => {
+      const { result } = renderHook(() => useWorkflowStore());
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+
+      act(() => {
+        result.current.createWorkflow("Test Workflow");
+        result.current.addNode("invalidType", { x: 100, y: 100 });
+      });
+
+      expect(result.current.currentWorkflow?.nodes).toHaveLength(0);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid node type: "invalidType"'),
+        expect.any(String)
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("should accept all valid node types", () => {
+      const { result } = renderHook(() => useWorkflowStore());
+
+      const validTypes = [
+        "webScraping",
+        "structuredOutput",
+        "embeddingGenerator",
+        "similaritySearch",
+        "llmTask",
+        "dataInput",
+        "dataOutput",
+        "database",
+        "slack",
+        "discord",
+        "gmail",
+      ];
+
+      act(() => {
+        result.current.createWorkflow("Test Workflow");
+        validTypes.forEach((type, index) => {
+          result.current.addNode(type, { x: index * 150, y: 100 });
+        });
+      });
+
+      expect(result.current.currentWorkflow?.nodes).toHaveLength(
+        validTypes.length
+      );
+    });
+  });
+
+  describe("Position Collision Detection", () => {
+    it("should place node at requested position if no collision", () => {
+      const { result } = renderHook(() => useWorkflowStore());
+
+      act(() => {
+        result.current.createWorkflow("Test Workflow");
+        result.current.addNode("llmTask", { x: 100, y: 100 });
+      });
+
+      expect(result.current.currentWorkflow?.nodes[0].position).toEqual({
+        x: 100,
+        y: 100,
+      });
+    });
+
+    it("should resolve position collision automatically", () => {
+      const { result } = renderHook(() => useWorkflowStore());
+      const consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
+
+      act(() => {
+        result.current.createWorkflow("Test Workflow");
+        // Add first node
+        result.current.addNode("llmTask", { x: 100, y: 100 });
+        // Try to add second node at same position
+        result.current.addNode("dataInput", { x: 100, y: 100 });
+      });
+
+      expect(result.current.currentWorkflow?.nodes).toHaveLength(2);
+
+      const node1Pos = result.current.currentWorkflow?.nodes[0].position;
+      const node2Pos = result.current.currentWorkflow?.nodes[1].position;
+
+      // Positions should be different
+      expect(node1Pos).not.toEqual(node2Pos);
+
+      // Should have logged collision detection
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Position collision detected")
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it("should handle multiple collisions", () => {
+      const { result } = renderHook(() => useWorkflowStore());
+
+      act(() => {
+        result.current.createWorkflow("Test Workflow");
+        // Add multiple nodes at similar positions
+        result.current.addNode("llmTask", { x: 100, y: 100 });
+        result.current.addNode("dataInput", { x: 105, y: 105 });
+        result.current.addNode("dataOutput", { x: 110, y: 110 });
+      });
+
+      expect(result.current.currentWorkflow?.nodes).toHaveLength(3);
+
+      // All nodes should have unique positions
+      const positions = result.current.currentWorkflow?.nodes.map(
+        (n) => `${n.position.x},${n.position.y}`
+      );
+      const uniquePositions = new Set(positions);
+      expect(uniquePositions.size).toBe(3);
+    });
+
+    it("should allow nodes far apart without collision", () => {
+      const { result } = renderHook(() => useWorkflowStore());
+      const consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
+
+      act(() => {
+        result.current.createWorkflow("Test Workflow");
+        result.current.addNode("llmTask", { x: 100, y: 100 });
+        result.current.addNode("dataInput", { x: 300, y: 100 }); // 200px apart
+      });
+
+      // No collision should be logged for nodes far apart
+      expect(consoleLogSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Position collision detected")
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+  });
+
   describe("Workflow Management", () => {
     it("should create a new workflow", () => {
       const { result } = renderHook(() => useWorkflowStore());
