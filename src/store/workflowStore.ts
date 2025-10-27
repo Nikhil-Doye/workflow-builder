@@ -252,6 +252,7 @@ interface WorkflowStore {
   // Workflow management
   createWorkflow: (name: string) => void;
   loadWorkflow: (workflowId: string) => void;
+  importWorkflow: (workflow: Workflow) => void;
   saveWorkflow: () => void;
   updateWorkflow: (workflowId: string, updates: Partial<Workflow>) => void;
   deleteWorkflow: (workflowId: string) => void;
@@ -382,6 +383,51 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     const workflow = get().workflows.find((w) => w.id === workflowId);
     if (workflow) {
       set({ currentWorkflow: workflow });
+    }
+  },
+
+  importWorkflow: (workflow: Workflow) => {
+    // Check if workflow with same ID already exists
+    const existingWorkflow = get().workflows.find((w) => w.id === workflow.id);
+
+    if (existingWorkflow) {
+      // Generate new ID to avoid conflicts
+      const importedWorkflow = {
+        ...workflow,
+        id: generateNodeId(), // Reuse UUID generator
+        name: `${workflow.name} (imported)`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const newWorkflows = [...get().workflows, importedWorkflow];
+
+      set({
+        workflows: newWorkflows,
+        currentWorkflow: importedWorkflow,
+      });
+
+      saveWorkflowsToStorage(newWorkflows);
+
+      console.log(`Workflow "${importedWorkflow.name}" imported with new ID`);
+    } else {
+      // Use original workflow (no ID conflict)
+      const importedWorkflow = {
+        ...workflow,
+        createdAt: new Date(workflow.createdAt),
+        updatedAt: new Date(),
+      };
+
+      const newWorkflows = [...get().workflows, importedWorkflow];
+
+      set({
+        workflows: newWorkflows,
+        currentWorkflow: importedWorkflow,
+      });
+
+      saveWorkflowsToStorage(newWorkflows);
+
+      console.log(`Workflow "${importedWorkflow.name}" imported successfully`);
     }
   },
 

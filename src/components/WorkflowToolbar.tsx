@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import toast from "react-hot-toast";
 import { useWorkflowStore } from "../store/workflowStore";
 import {
   Download,
@@ -34,6 +35,7 @@ export const WorkflowToolbar: React.FC = () => {
   const {
     currentWorkflow,
     saveWorkflow,
+    importWorkflow,
     executeWorkflow,
     isExecuting,
     clearAllNodes,
@@ -70,15 +72,50 @@ export const WorkflowToolbar: React.FC = () => {
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    const toastId = toast.loading(`Importing ${file.name}...`);
+
+    try {
       const workflow = await loadWorkflowFromFile(file);
+
       if (workflow) {
-        // In a real app, you'd add this to the workflows list
-        console.log("Imported workflow:", workflow);
-        alert("Workflow imported successfully!");
+        // Import workflow - automatically adds to list and opens for editing
+        importWorkflow(workflow);
+
+        toast.success(
+          `✓ Workflow "${workflow.name}" imported successfully!\n` +
+            `${workflow.nodes.length} nodes, ${workflow.edges.length} connections`,
+          {
+            id: toastId,
+            duration: 4000,
+          }
+        );
+
+        console.log(`[WorkflowToolbar] Imported workflow:`, {
+          name: workflow.name,
+          nodes: workflow.nodes.length,
+          edges: workflow.edges.length,
+        });
       } else {
-        alert("Failed to import workflow. Please check the file format.");
+        toast.error("Failed to import workflow\nPlease check the file format", {
+          id: toastId,
+          duration: 5000,
+        });
       }
+    } catch (error) {
+      console.error("[WorkflowToolbar] Import error:", error);
+      toast.error(
+        `Import failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        { id: toastId, duration: 5000 }
+      );
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
