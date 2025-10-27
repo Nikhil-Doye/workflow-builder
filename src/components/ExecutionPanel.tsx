@@ -1,7 +1,12 @@
 import React from "react";
+import { TestInputConfigurator } from "./TestInputConfigurator";
 import { useWorkflowStore } from "../store/workflowStore";
 import { ExecutionConfiguration } from "./ExecutionConfiguration";
 import { ExecutionPlanPreview } from "./ExecutionPlanPreview";
+import {
+  testInputManager,
+  TestInputConfig,
+} from "../services/testInputManager";
 import {
   Zap,
   Play,
@@ -19,6 +24,9 @@ import {
   BarChart3,
   Layers,
   GitBranch,
+  Zap as TestIcon,
+  Trash2,
+  X,
 } from "lucide-react";
 
 export const ExecutionPanel: React.FC = () => {
@@ -41,6 +49,9 @@ export const ExecutionPanel: React.FC = () => {
   const [showStats, setShowStats] = React.useState(false);
   const [showConfig, setShowConfig] = React.useState(false);
   const [showPlanPreview, setShowPlanPreview] = React.useState(false);
+  const [showTestInputConfig, setShowTestInputConfig] = React.useState(false);
+  const [testInputConfig, setTestInputConfig] =
+    React.useState<TestInputConfig | null>(null);
 
   const handleExecute = async () => {
     if (isExecuting) {
@@ -51,6 +62,8 @@ export const ExecutionPanel: React.FC = () => {
     if (!currentWorkflow) return;
 
     try {
+      // For now, execute without test input
+      // In a future enhancement, you could pass the testInputConfig here
       await executeWorkflow();
     } catch (error) {
       console.error("Execution failed:", error);
@@ -279,6 +292,13 @@ export const ExecutionPanel: React.FC = () => {
                   <Download className="w-4 h-4" />
                 </button>
                 <button
+                  onClick={() => setShowTestInputConfig(true)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Configure test inputs"
+                >
+                  <TestIcon className="w-4 h-4" />
+                </button>
+                <button
                   onClick={() => togglePanel("executionPanel")}
                   className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                   title="Collapse panel"
@@ -334,6 +354,16 @@ export const ExecutionPanel: React.FC = () => {
                 title="Clear results"
               >
                 <RotateCcw className="w-4 h-4" />
+              </button>
+
+              {/* Test Input Configuration Button */}
+              <button
+                onClick={() => setShowTestInputConfig(true)}
+                className="px-4 py-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-all duration-200 flex items-center space-x-2"
+                title="Configure test inputs"
+              >
+                <TestIcon className="w-4 h-4" />
+                <span className="font-medium hidden sm:inline">Test Input</span>
               </button>
 
               <button
@@ -546,6 +576,17 @@ export const ExecutionPanel: React.FC = () => {
       <ExecutionPlanPreview
         isOpen={showPlanPreview}
         onClose={() => setShowPlanPreview(false)}
+      />
+
+      {/* Test Input Configuration Modal */}
+      <TestInputConfigurator
+        isOpen={showTestInputConfig}
+        onClose={() => setShowTestInputConfig(false)}
+        nodes={currentWorkflow?.nodes || []}
+        onApply={(config) => {
+          setTestInputConfig(config);
+          setShowTestInputConfig(false);
+        }}
       />
     </div>
   );

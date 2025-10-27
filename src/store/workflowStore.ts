@@ -14,6 +14,11 @@ import { agentManager } from "../services/agents/AgentManager";
 import { executionEngine, ExecutionPlan } from "../services/executionEngine";
 import { LabelDependencyManager } from "../utils/labelDependencyManager";
 
+import {
+  testInputManager,
+  TestInputConfig,
+} from "../services/testInputManager";
+
 // localStorage key for workflows
 const WORKFLOWS_STORAGE_KEY = "agent-workflow-builder-workflows";
 
@@ -638,29 +643,20 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         retryPolicy: options?.retryPolicy || executionConfig.retryPolicy,
       };
 
-      // If test input is provided, update the data input node
+      // Apply test inputs using the new test input manager
       if (testInput) {
-        const dataInputNode = currentWorkflow.nodes.find(
-          (node) => node.data.type === "dataInput"
+        // Convert legacy string format to new config format
+        const testInputConfig = testInputManager.fromLegacyFormat(
+          testInput,
+          currentWorkflow.nodes
         );
-        if (dataInputNode) {
-          // Update the node's config with test input
-          const updatedNodes = currentWorkflow.nodes.map((node) =>
-            node.id === dataInputNode.id
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    config: {
-                      ...node.data.config,
-                      defaultValue: testInput,
-                    },
-                  },
-                }
-              : node
-          );
-          set({ currentWorkflow: { ...currentWorkflow, nodes: updatedNodes } });
-        }
+
+        // Apply the test input configuration to workflow nodes
+        const updatedNodes = testInputManager.applyTestInputs(
+          currentWorkflow.nodes,
+          testInputConfig
+        );
+        set({ currentWorkflow: { ...currentWorkflow, nodes: updatedNodes } });
       }
 
       // Execute using the advanced execution engine
