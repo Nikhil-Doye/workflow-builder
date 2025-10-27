@@ -56,11 +56,38 @@ export const callOpenAI = async (
       });
 
       if (!resp.ok) {
-        const text = await resp.text();
-        throw new Error(`Proxy error: ${resp.status} ${text}`);
+        let errorText = "";
+        try {
+          errorText = await resp.text();
+        } catch {
+          errorText = "Unable to read error response";
+        }
+
+        // Throw with status code for better error classification
+        const error = new Error(
+          `API proxy error: ${resp.status} ${resp.statusText}`
+        ) as any;
+        error.statusCode = resp.status;
+        error.responseText = errorText;
+        throw error;
       }
 
-      const data = await resp.json();
+      let data: any;
+      try {
+        data = await resp.json();
+      } catch (parseError) {
+        throw new Error(
+          "Invalid JSON response from API proxy. The service may be misconfigured."
+        );
+      }
+
+      // Validate response structure
+      if (!data || typeof data !== "object") {
+        throw new Error(
+          "Invalid response structure from API proxy. Expected an object."
+        );
+      }
+
       return {
         content: data.content || "",
         usage: data.usage,
@@ -69,28 +96,73 @@ export const callOpenAI = async (
 
     // Fallback (dev only): direct browser call (keys are exposed!)
     if (process.env.NODE_ENV === "production") {
-      throw new Error(
+      const error = new Error(
         "LLM proxy not configured. In production, configure REACT_APP_API_BASE or localStorage 'api_base_url' to a secure backend."
-      );
+      ) as any;
+      error.isConfigurationError = true;
+      throw error;
     }
 
     const apiKey = getApiKey();
     if (!apiKey) {
-      throw new Error(
+      const error = new Error(
         "DeepSeek API key not configured. Set it in settings for local development, or configure a proxy for production."
-      );
+      ) as any;
+      error.isConfigurationError = true;
+      throw error;
     }
 
     openai.apiKey = apiKey;
-    const response = await openai.chat.completions.create({
-      model: config.model,
-      messages: [{ role: "user", content: prompt }],
-      temperature: config.temperature,
-      max_tokens: config.maxTokens || 1000,
-    });
+
+    let response: any;
+    try {
+      response = await openai.chat.completions.create({
+        model: config.model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: config.temperature,
+        max_tokens: config.maxTokens || 1000,
+      });
+    } catch (apiError: any) {
+      // Extract useful error information from OpenAI SDK errors
+      const statusCode = apiError?.status || apiError?.response?.status;
+      const errorMessage =
+        apiError?.message || apiError?.error?.message || "Unknown API error";
+
+      const error = new Error(errorMessage) as any;
+      error.statusCode = statusCode;
+      error.originalError = apiError;
+
+      // Add specific error details based on status code
+      if (statusCode === 401) {
+        error.message =
+          "Invalid or expired API key. Please check your API key in settings.";
+      } else if (statusCode === 429) {
+        error.message =
+          "Rate limit exceeded. Please wait a moment and try again.";
+      } else if (statusCode === 500 || statusCode === 503) {
+        error.message =
+          "The AI service is temporarily unavailable. Please try again later.";
+      }
+
+      throw error;
+    }
+
+    // Validate response structure
+    if (!response || !response.choices || response.choices.length === 0) {
+      throw new Error(
+        "Invalid response structure from AI service. Expected choices array."
+      );
+    }
 
     const content = response.choices[0]?.message?.content || "";
     const usage = response.usage;
+
+    // Warn if content is empty
+    if (!content) {
+      console.warn(
+        "OpenAI API returned empty content. This may indicate an issue with the request or model."
+      );
+    }
 
     return {
       content,
@@ -103,12 +175,17 @@ export const callOpenAI = async (
         : undefined,
     };
   } catch (error) {
-    console.error("OpenAI API Error:", error);
-    throw new Error(
-      `OpenAI API call failed: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
+    // Enhanced error logging
+    console.error("OpenAI API Error:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      statusCode: (error as any)?.statusCode,
+      model: config.model,
+      promptLength: prompt.length,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    // Re-throw with preserved error information
+    throw error;
   }
 };
 
