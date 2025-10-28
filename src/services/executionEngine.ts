@@ -521,7 +521,7 @@ export class ExecutionEngine {
       data?: any,
       error?: string
     ) => void,
-    executionId: string
+    executionId: string = ""
   ): Promise<void> {
     plan.status = "running";
     plan.startTime = new Date();
@@ -550,7 +550,7 @@ export class ExecutionEngine {
       data?: any,
       error?: string
     ) => void,
-    executionId: string
+    executionId: string = ""
   ): Promise<void> {
     const executionOrder = this.getExecutionOrder(plan.nodes, plan.edges);
 
@@ -602,7 +602,7 @@ export class ExecutionEngine {
       data?: any,
       error?: string
     ) => void,
-    executionId: string
+    executionId: string = ""
   ): Promise<void> {
     const parallelGroups = this.createParallelGroups(
       plan.nodes,
@@ -637,7 +637,7 @@ export class ExecutionEngine {
       data?: any,
       error?: string
     ) => void,
-    executionId: string
+    executionId: string = ""
   ): Promise<void> {
     const maxConcurrency =
       group.maxConcurrency ||
@@ -687,7 +687,7 @@ export class ExecutionEngine {
       data?: any,
       error?: string
     ) => void,
-    executionId: string
+    executionId: string = ""
   ): Promise<void> {
     const executionOrder = this.getExecutionOrder(plan.nodes, plan.edges);
     const visited = new Set<string>();
@@ -762,7 +762,7 @@ export class ExecutionEngine {
       data?: any,
       error?: string
     ) => void,
-    executionId: string
+    executionId: string = ""
   ): Promise<void> {
     for (const branch of branches) {
       const shouldExecuteTrue = await this.evaluateCondition(
@@ -924,7 +924,7 @@ export class ExecutionEngine {
       data?: any,
       error?: string
     ) => void,
-    executionId: string
+    executionId: string = ""
   ): Promise<void> {
     context.status = "running";
     context.startTime = new Date();

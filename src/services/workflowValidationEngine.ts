@@ -199,14 +199,16 @@ export class WorkflowValidationEngine {
 
     // Check for circular dependencies
     const circularDeps = this.detectCircularDependencies(nodeIds, edges);
-    if (circularDeps.length > 0) {
+    if (circularDeps.size > 0) {
       result.isValid = false;
       result.errors.push({
         id: "circular_dependency",
         severity: "error",
         type: "circular_dependency",
         nodeIds: Array.from(circularDeps),
-        message: `Circular dependencies detected: ${circularDeps.join(", ")}`,
+        message: `Circular dependencies detected: ${Array.from(
+          circularDeps
+        ).join(", ")}`,
         suggestion:
           "Remove the circular connections between nodes to create a valid execution path",
       });

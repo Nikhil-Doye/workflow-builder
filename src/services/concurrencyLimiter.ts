@@ -6,7 +6,7 @@
 export class ConcurrencyLimiter {
   private maxConcurrency: number;
   private running: number = 0;
-  private queue: Array<() => void> = [];
+  private queue: Array<(value: unknown) => void> = [];
 
   constructor(maxConcurrency: number = 5) {
     this.maxConcurrency = Math.max(1, maxConcurrency);
@@ -31,7 +31,7 @@ export class ConcurrencyLimiter {
       // Process next item in queue if any
       const nextResolve = this.queue.shift();
       if (nextResolve) {
-        nextResolve();
+        nextResolve(undefined);
       }
     }
   }

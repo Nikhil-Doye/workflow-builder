@@ -405,6 +405,11 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
   const [optimizationResult, setOptimizationResult] = useState<string>("");
   const [isPreviewingOptimization, setIsPreviewingOptimization] =
     useState(false);
+
+  // Get the latest node data from the store to ensure we have the most up-to-date config
+  const currentNode = currentWorkflow?.nodes.find((node) => node.id === nodeId);
+  const currentData = currentNode?.data || data;
+
   const [originalPrompt, setOriginalPrompt] = useState<string>(
     (currentData.config && currentData.config.prompt) || ""
   );
@@ -413,10 +418,6 @@ export const NodeConfiguration: React.FC<NodeConfigurationProps> = ({
   // State for label change dialog
   const [showLabelDialog, setShowLabelDialog] = useState(false);
   const [pendingLabel, setPendingLabel] = useState<string>("");
-
-  // Get the latest node data from the store to ensure we have the most up-to-date config
-  const currentNode = currentWorkflow?.nodes.find((node) => node.id === nodeId);
-  const currentData = currentNode?.data || data;
 
   const handleConfigChange = (key: string, value: any) => {
     updateNode(nodeId, {

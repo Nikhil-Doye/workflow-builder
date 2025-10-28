@@ -277,6 +277,7 @@ export function parseAndValidate<T = any>(
     strictMode?: boolean;
     fallbackValue?: T;
     logAttempts?: boolean;
+    allowExtra?: boolean;
   } = {}
 ): ParseResult<T> & { validationErrors?: string[] } {
   const parseResult = parseRobustJson<T>(input, options);
@@ -285,11 +286,9 @@ export function parseAndValidate<T = any>(
     return parseResult;
   }
 
-  const validation = validateJsonStructure(
-    parseResult.data,
-    requiredFields,
-    options
-  );
+  const validation = validateJsonStructure(parseResult.data, requiredFields, {
+    allowExtra: options.allowExtra,
+  });
 
   if (!validation.isValid) {
     return {

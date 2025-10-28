@@ -186,9 +186,21 @@ class DatabaseConnectionManager {
     const connection = this.connections.get(id);
     if (!connection) return false;
 
+    // Merge connection with updates first
+    const mergedConnection = { ...connection, ...updates };
+    // Remove id and status as required by secureCredentials
+    const {
+      id: _,
+      status: __,
+      ...connectionWithoutIdStatus
+    } = mergedConnection;
+
     // SECURITY: Handle credential updates securely
-    const secureUpdates = await this.secureCredentials(updates, id);
-    const updatedConnection = { ...connection, ...secureUpdates };
+    const secureUpdates = await this.secureCredentials(
+      connectionWithoutIdStatus,
+      id
+    );
+    const updatedConnection = { ...connection, ...updates, ...secureUpdates };
 
     // Validate credentials if connection details are being updated
     if (this.hasConnectionDetailsChanged(updates)) {
