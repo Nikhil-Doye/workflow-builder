@@ -68,6 +68,48 @@ export class ExecutionEngine {
   private maxConcurrentExecutions = 10;
   private defaultTimeout = 300000; // 5 minutes
 
+  // Validate node types before execution
+  private validateNodeTypes(nodes: any[]): {
+    isValid: boolean;
+    errors: string[];
+  } {
+    const errors: string[] = [];
+    const supportedTypes = new Set([
+      "dataInput",
+      "dataOutput",
+      "webScraping",
+      "llmTask",
+      "database",
+      "slack",
+      "discord",
+      "gmail",
+      "structuredOutput",
+      "embeddingGenerator",
+      "similaritySearch",
+    ]);
+
+    nodes.forEach((node, index) => {
+      if (!node.type) {
+        errors.push(
+          `Node at index ${index} (id: ${
+            node.id || "unknown"
+          }) has no type specified`
+        );
+      } else if (!supportedTypes.has(node.type)) {
+        errors.push(
+          `Node "${node.data?.label || node.id}" has unsupported type: "${
+            node.type
+          }". ` + `Supported types: ${Array.from(supportedTypes).join(", ")}`
+        );
+      }
+    });
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+
   // Main execution methods
   async executeWorkflow(
     workflowId: string,
@@ -115,6 +157,30 @@ export class ExecutionEngine {
         | "conditional",
     };
     executionEventBus.emit(executionStartEvent);
+
+    // Validate node types before execution
+    const nodeTypeValidation = this.validateNodeTypes(nodes);
+    if (!nodeTypeValidation.isValid) {
+      const errorMessage = `Invalid node types detected:\n${nodeTypeValidation.errors.join(
+        "\n"
+      )}`;
+      console.error(
+        "[ExecutionEngine] Node type validation failed:",
+        nodeTypeValidation.errors
+      );
+
+      // Emit validation error event
+      const validationErrorEvent: ExecutionErrorEvent = {
+        type: "execution:error",
+        executionId,
+        stage: "validation",
+        error: errorMessage,
+        timestamp: new Date(),
+      };
+      executionEventBus.emit(validationErrorEvent);
+
+      throw new Error(errorMessage);
+    }
 
     // Validate workflow before execution
     try {
@@ -900,8 +966,37 @@ export class ExecutionEngine {
         substitutedConfig: substitutedConfig,
       });
 
-      // Import the appropriate node processor
-      const processor = await this.getNodeProcessor(context.nodeType);
+      // Import the appropriate node processor with error handling
+      let processor;
+      try {
+        processor = await this.getNodeProcessor(context.nodeType);
+      } catch (processorError) {
+        // Processor resolution failed - provide detailed error
+        const errorMessage =
+          processorError instanceof Error
+            ? processorError.message
+            : "Unknown processor resolution error";
+
+        throw new Error(
+          `Cannot execute node "${context.nodeId}" (type: ${context.nodeType}): ${errorMessage}\n\n` +
+            `Possible causes:\n` +
+            `- Node type "${context.nodeType}" is invalid or unsupported\n` +
+            `- Processor file is missing or corrupted\n` +
+            `- Workflow was created with an older version\n\n` +
+            `To fix this issue:\n` +
+            `1. Check if the node type is valid\n` +
+            `2. Remove the node and re-add it from the node library\n` +
+            `3. Contact support if the issue persists`
+        );
+      }
+
+      // Validate processor is a function
+      if (typeof processor !== "function") {
+        throw new Error(
+          `Invalid processor for node "${context.nodeId}" (type: ${context.nodeType}): ` +
+            `Processor is not a function. This indicates a corrupted processor module.`
+        );
+      }
 
       // Execute the node
       const result = await processor(context, plan);
@@ -978,39 +1073,109 @@ export class ExecutionEngine {
     }
   }
 
-  // Get node processor based on type
+  // Get node processor based on type with robust error handling
   private async getNodeProcessor(nodeType: string): Promise<any> {
-    console.log(`Loading processor for node type: ${nodeType}`);
+    console.log(
+      `[ExecutionEngine] Loading processor for node type: ${nodeType}`
+    );
 
-    // Import the appropriate processor
-    switch (nodeType) {
-      case "dataInput":
-        return (await import("./processors/dataInputProcessor")).default;
-      case "dataOutput":
-        return (await import("./processors/dataOutputProcessor")).default;
-      case "webScraping":
-        return (await import("./processors/webScrapingProcessor")).default;
-      case "llmTask":
-        return (await import("./processors/llmProcessor")).default;
-      case "database":
-        return (await import("./processors/unifiedDatabaseProcessor")).default;
-      case "slack":
-        return (await import("./processors/slackProcessor")).default;
-      case "discord":
-        return (await import("./processors/discordProcessor")).default;
-      case "gmail":
-        return (await import("./processors/gmailProcessor")).default;
-      case "structuredOutput":
-        return (await import("./processors/structuredOutputProcessor")).default;
-      case "embeddingGenerator":
-        return (await import("./processors/embeddingProcessor")).default;
-      case "similaritySearch":
-        return (await import("./processors/similarityProcessor")).default;
-      default:
+    // Registry of supported node types and their processor paths
+    const processorRegistry: Record<string, string> = {
+      dataInput: "./processors/dataInputProcessor",
+      dataOutput: "./processors/dataOutputProcessor",
+      webScraping: "./processors/webScrapingProcessor",
+      llmTask: "./processors/llmProcessor",
+      database: "./processors/unifiedDatabaseProcessor",
+      slack: "./processors/slackProcessor",
+      discord: "./processors/discordProcessor",
+      gmail: "./processors/gmailProcessor",
+      structuredOutput: "./processors/structuredOutputProcessor",
+      embeddingGenerator: "./processors/embeddingProcessor",
+      similaritySearch: "./processors/similarityProcessor",
+    };
+
+    try {
+      // Check if node type is supported
+      const processorPath = processorRegistry[nodeType];
+
+      if (processorPath) {
+        // Attempt to import the specific processor
+        try {
+          const processor = await import(processorPath);
+
+          if (!processor || !processor.default) {
+            throw new Error(
+              `Processor module for "${nodeType}" exists but does not export a default function`
+            );
+          }
+
+          console.log(
+            `[ExecutionEngine] ✓ Successfully loaded processor for: ${nodeType}`
+          );
+          return processor.default;
+        } catch (importError) {
+          console.error(
+            `[ExecutionEngine] Failed to import processor for "${nodeType}":`,
+            importError
+          );
+
+          throw new Error(
+            `Failed to load processor for node type "${nodeType}". ` +
+              `This may be due to a missing or corrupted processor file. ` +
+              `Error: ${
+                importError instanceof Error
+                  ? importError.message
+                  : String(importError)
+              }`
+          );
+        }
+      } else {
+        // Unsupported/unknown node type - use default processor
         console.warn(
-          `Using default processor for unknown/unsupported type: ${nodeType}`
+          `[ExecutionEngine] ⚠ Unknown node type: "${nodeType}". ` +
+            `Supported types: ${Object.keys(processorRegistry).join(", ")}`
         );
-        return (await import("./processors/defaultProcessor")).default;
+
+        try {
+          const defaultProcessor = await import(
+            "./processors/defaultProcessor"
+          );
+
+          if (!defaultProcessor || !defaultProcessor.default) {
+            throw new Error("Default processor is not available");
+          }
+
+          console.log(
+            `[ExecutionEngine] Using default processor for: ${nodeType}`
+          );
+          return defaultProcessor.default;
+        } catch (defaultImportError) {
+          console.error(
+            `[ExecutionEngine] Critical: Failed to load default processor:`,
+            defaultImportError
+          );
+
+          throw new Error(
+            `Critical error: Cannot load default processor for unknown node type "${nodeType}". ` +
+              `This indicates a system configuration issue. ` +
+              `Error: ${
+                defaultImportError instanceof Error
+                  ? defaultImportError.message
+                  : String(defaultImportError)
+              }`
+          );
+        }
+      }
+    } catch (error) {
+      // Re-throw with enhanced context if not already a processor error
+      if (error instanceof Error && error.message.includes("processor")) {
+        throw error;
+      }
+
+      throw new Error(
+        `Unexpected error while resolving processor for node type "${nodeType}": ` +
+          `${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
